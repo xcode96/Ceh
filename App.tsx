@@ -196,7 +196,7 @@ const App: React.FC = () => {
             const newModule: Module = {
                 id: newModuleId,
                 title: title.trim(),
-                icon: 'folder',
+                icon: 'book-open',
                 color: 'bg-gray-100 text-gray-600',
                 subTopics: [],
             };
@@ -215,6 +215,15 @@ const App: React.FC = () => {
 
             return [...prevModules, newModule];
         });
+    }, []);
+    
+    const handleEditModule = useCallback((moduleId: number, newTitle: string) => {
+        if (!newTitle || newTitle.trim() === '') return;
+        setModules(prevModules => 
+            prevModules.map(module => 
+                module.id === moduleId ? { ...module, title: newTitle.trim() } : module
+            )
+        );
     }, []);
 
     const handleAddSubTopic = useCallback((moduleId: number, subTopic: string) => {
@@ -386,6 +395,7 @@ const App: React.FC = () => {
                   subTopicVisibility={subTopicVisibility}
                   onToggleSubTopicVisibility={handleToggleSubTopicVisibility}
                   onAddModule={handleAddModule}
+                  onEditModule={handleEditModule}
                   onAddSubTopic={handleAddSubTopic}
                 />;
     }

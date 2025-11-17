@@ -24,7 +24,7 @@ export type IconName =
   'lock' | 'alert' | 'users' | 'shield-check' | 
   'laptop' | 'database' | 'footprint' | 'scan' |
   'bug' | 'wifi' | 'ban' | 'server' | 'code-bracket' |
-  'iot' | 'cloud' | 'chevron-down' | 'folder' | 'sparkles' |
-  'upload' | 'download' | 'eye' | 'eye-slash';
+  'iot' | 'cloud' | 'chevron-down' | 'sparkles' |
+  'upload' | 'download' | 'eye' | 'eye-slash' | 'edit' | 'book-open';
 
 export type ModuleStatus = 'completed' | 'in-progress' | 'not-started';

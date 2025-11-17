@@ -22,6 +22,7 @@ interface DashboardProps {
   subTopicVisibility: { [moduleId: number]: { [subTopic: string]: boolean } };
   onToggleSubTopicVisibility: (moduleId: number, subTopic: string) => void;
   onAddModule: (title: string) => void;
+  onEditModule: (moduleId: number, newTitle: string) => void;
   onAddSubTopic: (moduleId: number, subTopic: string) => void;
 }
 
@@ -31,7 +32,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onExportQuestions, onImportQuestions, onExportSubTopic, onImportSubTopic,
   moduleVisibility, onToggleModuleVisibility,
   subTopicVisibility, onToggleSubTopicVisibility,
-  onAddModule, onAddSubTopic
+  onAddModule, onEditModule, onAddSubTopic
 }) => {
   const completedCount = completedModules.size;
   const totalModules = modules.length;
@@ -123,6 +124,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               onStart={(subTopic) => onStartQuiz(module, subTopic)}
               isAdmin={isAdmin}
               onManage={(subTopic) => onManageQuestions(module, subTopic)}
+              onEdit={(newTitle) => onEditModule(module.id, newTitle)}
               onExport={(subTopic) => onExportSubTopic(module, subTopic)}
               onImport={(event, subTopic) => onImportSubTopic(event, module, subTopic)}
               isVisible={moduleVisibility[module.id]}
@@ -136,7 +138,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         {isAdmin && (
             <div className="mt-6">
                 <button onClick={handleAddModuleClick} className="w-full py-3 border-2 border-dashed border-gray-300 text-gray-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors duration-300">
-                    + Add New Module (Folder)
+                    + Add New Module
                 </button>
             </div>
         )}

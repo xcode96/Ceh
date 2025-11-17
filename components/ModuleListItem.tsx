@@ -8,6 +8,7 @@ interface ModuleListItemProps {
   onStart: (subTopic?: string) => void;
   isAdmin: boolean;
   onManage: (subTopic: string) => void;
+  onEdit: (newTitle: string) => void;
   onExport: (subTopic: string) => void;
   onImport: (event: React.ChangeEvent<HTMLInputElement>, subTopic: string) => void;
   isVisible: boolean;
@@ -89,7 +90,7 @@ const SubTopicItem: React.FC<{
 
 
 const ModuleListItem: React.FC<ModuleListItemProps> = ({ 
-    module, status, onStart, isAdmin, onManage, onExport, onImport, isVisible, 
+    module, status, onStart, isAdmin, onManage, onEdit, onExport, onImport, isVisible, 
     onToggleVisibility, subTopicVisibility, onToggleSubTopicVisibility, onAddSubTopic 
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -99,6 +100,14 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
     if (name) {
       onAddSubTopic(name);
     }
+  };
+  
+  const handleEditClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const newTitle = window.prompt("Enter the new title for the module:", module.title);
+      if (newTitle) {
+          onEdit(newTitle);
+      }
   };
 
   const getStatusBadge = () => {
@@ -142,10 +151,21 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
               </button>
           )}
           <div className={`p-3 rounded-lg ${module.color}`}>
-            <Icon iconName="folder" />
+            <Icon iconName={module.icon} />
           </div>
           <div>
-            <h3 className="font-bold text-gray-800">{module.title}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-gray-800">{module.title}</h3>
+              {isAdmin && (
+                <button
+                  onClick={handleEditClick}
+                  title="Edit module title"
+                  className="p-1 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-700"
+                >
+                  <Icon iconName="edit" className="h-4 w-4" />
+                </button>
+              )}
+            </div>
             <p className="text-sm text-gray-500">{module.subTopics.length} sub-topics</p>
           </div>
         </div>
