@@ -1,8 +1,6 @@
-// FIX: Import GenerateContentResponse to correctly type the API response.
 import { GoogleGenAI, Type, GenerateContentResponse } from '@google/genai';
 import type { Question, SubTopic } from '../types';
 
-// FIX: Corrected generic type parameter from <T,> to <T> to fix type inference.
 const fetchWithTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
@@ -183,8 +181,22 @@ export const generateExplanationForQuestion = async (question: string, options: 
             The options are: ${options.join(', ')}.
 
             Please provide a clear and concise explanation of the core concept or topic this question is testing. Explain any key terms if necessary.
+            Start with a 💡 emoji.
+
+            **Use markdown for formatting.**
+            - Use bullet points with a '-' or '*' for lists (e.g., for examples or key points).
+            - Use bold text with '**' for emphasis.
+
+            For example:
+            💡 **Understanding the CIA Triad**
+            This question is about the three core principles of information security, known as the CIA Triad. Let's break them down:
+            *   **Confidentiality**: Keeping data secret.
+            *   **Integrity**: Ensuring data is accurate and trustworthy.
+            *   **Availability**: Making sure data is accessible when needed.
+            Think about which of these principles is most related to preventing unauthorized *disclosure*.
+
             IMPORTANT: DO NOT reveal which option is correct or even hint at it. Your goal is to help the student understand the question itself, not to give them the answer.
-            Keep the tone helpful and educational. The explanation should be a single paragraph.
+            Keep the tone helpful and educational.
         `;
 
         const responsePromise = ai.models.generateContent({
@@ -218,8 +230,19 @@ export const generateExplanationForAnswer = async (question: string, correctAnsw
             Their correct answer was: "${userAnswer}"
             
             Please provide a positive and concise explanation that reinforces why their answer is correct. 
-            Briefly elaborate on the concept to solidify their understanding.
-            Keep the tone encouraging and educational. The explanation should be a single paragraph.
+            Start with a ✅ emoji. Briefly elaborate on the concept to solidify their understanding.
+
+            **Use markdown for formatting.**
+            - Use bullet points with a '-' or '*' for lists (e.g., for examples or key points).
+            - Use bold text with '**' for emphasis.
+
+            For example:
+            ✅ **Correct!**
+            You're right, the answer is **Principle of Least Privilege**. This is a key security concept:
+            *   Users should only have access to the information and resources they absolutely need to perform their jobs.
+            *   This minimizes the damage from a compromised account.
+
+            Keep the tone encouraging and educational.
         `
         : `
             You are a cybersecurity expert tutor.
@@ -228,9 +251,24 @@ export const generateExplanationForAnswer = async (question: string, correctAnsw
             They chose: "${userAnswer}"
             The correct answer is: "${correctAnswer}"
             
-            Please provide a clear and concise explanation. First, explain why their choice ("${userAnswer}") is incorrect. Then, explain why "${correctAnswer}" is the correct answer.
+            Please provide a clear and concise explanation. Start with a ❌ emoji. 
+            1.  Explain why their choice ("${userAnswer}") is incorrect.
+            2.  Explain why "${correctAnswer}" is the correct answer.
             This will help them learn from their mistake.
-            Keep the tone helpful and educational, not critical. The explanation should be one to two paragraphs.
+
+            **Use markdown for formatting.**
+            - Use bullet points with a '-' or '*' for lists (e.g., for examples or key points).
+            - Use bold text with '**' for emphasis.
+
+            For example:
+            ❌ **Incorrect**
+            Your answer, **Phishing**, is incorrect because it typically involves fraudulent emails.
+            The correct answer is **Vishing**. Here's why:
+            *   Vishing stands for 'voice phishing'.
+            *   It uses phone calls or voice messages.
+            *   The goal is to trick people into giving up personal information.
+
+            Keep the tone helpful and educational, not critical.
         `;
 
         const responsePromise = ai.models.generateContent({

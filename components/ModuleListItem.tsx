@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import Icon from './Icon';
-import type { Module, ModuleStatus, QuestionBank, SubTopic } from '../types';
+import type { Module, ModuleStatus, QuestionBank, SubTopic, Question } from '../types';
 
 interface ModuleListItemProps {
   module: Module;
@@ -218,7 +218,8 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
     if (!moduleQuestions) {
       return 0;
     }
-    return Object.values(moduleQuestions).reduce((sum, questionsArray) => sum + (questionsArray?.length || 0), 0);
+    // FIX: The type of `questionsArray` was being inferred as `unknown`, causing the error `Operator '+' cannot be applied to types 'unknown' and 'number'`. Casting `questionsArray` to `Question[]` ensures `length` can be accessed safely and resolves the type conflict.
+    return Object.values(moduleQuestions).reduce((sum, questionsArray) => sum + ((questionsArray as Question[])?.length || 0), 0);
   }, [questionBank, module.id]);
 
   const handleAddSubTopicClick = () => {

@@ -63,3 +63,6 @@ This project is built to run directly in the browser without a complex build set
 
 - **GitHub**: [github.com/xcode96](https://github.com/xcode96/)
 - **LinkedIn**: [linkedin.com/in/manibharathi96](https://www.linkedin.com/in/manibharathi96)
+
+---
+Developed by XCODE96

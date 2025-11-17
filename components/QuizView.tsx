@@ -27,6 +27,72 @@ const tagColors = [
     "bg-indigo-100 text-indigo-800",
 ];
 
+const MarkdownRenderer: React.FC<{ text: string | null }> = ({ text }) => {
+  if (!text) {
+    return null;
+  }
+
+  const elements = text.split('\n').map((line, index) => {
+    if (line.startsWith('* ') || line.startsWith('- ')) {
+      const content = line.substring(2);
+      const parts = content.split(/(\*\*.*?\*\*)/g);
+      return (
+        <li key={index} className="ml-5 list-disc">
+          {parts.map((part, i) =>
+            part.startsWith('**') && part.endsWith('**') ? (
+              <strong key={i}>{part.slice(2, -2)}</strong>
+            ) : (
+              part
+            )
+          )}
+        </li>
+      );
+    }
+    if (line.match(/^(🔐|💡|✅|❌)\s/)) {
+        return <p key={index} className="font-semibold text-gray-800 flex items-center gap-2">{line}</p>;
+    }
+    if (line.trim() === '') {
+      return null;
+    }
+    const parts = line.split(/(\*\*.*?\*\*)/g);
+    return (
+      <p key={index}>
+        {parts.map((part, i) =>
+          part.startsWith('**') && part.endsWith('**') ? (
+            <strong key={i}>{part.slice(2, -2)}</strong>
+          ) : (
+            part
+          )
+        )}
+      </p>
+    );
+  }).filter(Boolean);
+
+  // FIX: Replace `JSX.Element` with `React.ReactElement` to resolve "Cannot find namespace 'JSX'" error.
+  const groupedElements: React.ReactElement[] = [];
+  // FIX: Replace `JSX.Element` with `React.ReactElement` to resolve "Cannot find namespace 'JSX'" error.
+  let currentList: React.ReactElement[] = [];
+
+  elements.forEach((el, i) => {
+    if (el.type === 'li') {
+      currentList.push(el);
+    } else {
+      if (currentList.length > 0) {
+        groupedElements.push(<ul key={`ul-${i}`} className="space-y-1 mt-2">{currentList}</ul>);
+        currentList = [];
+      }
+      // FIX: Replace `JSX.Element` with `React.ReactElement` to resolve "Cannot find namespace 'JSX'" error.
+      groupedElements.push(el as React.ReactElement);
+    }
+  });
+
+  if (currentList.length > 0) {
+    groupedElements.push(<ul key="ul-last" className="space-y-1 mt-2">{currentList}</ul>);
+  }
+
+  return <div className="text-gray-600 text-sm space-y-2">{groupedElements}</div>;
+};
+
 const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, questionBank, onCompleteQuiz }) => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -228,7 +294,7 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
            {isQuestionExplanationLoading ? (
              <p className="text-gray-600 animate-pulse">Gemini is thinking...</p>
            ) : (
-             <p className="text-gray-600 text-sm">{questionExplanation}</p>
+             <MarkdownRenderer text={questionExplanation} />
            )}
          </div>
       )}
@@ -255,7 +321,7 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
            {isExplanationLoading ? (
              <p className="text-gray-600 animate-pulse">Gemini is thinking...</p>
            ) : (
-             <p className="text-gray-600 text-sm">{explanation}</p>
+             <MarkdownRenderer text={explanation} />
            )}
          </div>
       )}
