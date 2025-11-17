@@ -1,17 +1,18 @@
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
 import QuizView from './components/QuizView';
 import QuizCompletedView from './components/QuizCompletedView';
 import LoginView from './components/LoginView';
 import QuestionManager from './components/QuestionManager';
-import { INITIAL_MODULE_DATA } from './constants';
-import type { Module, QuestionBank, Question } from './types';
+import Home from './components/Home';
+import { INITIAL_EXAM_DATA } from './constants';
+import type { Module, QuestionBank, Question, Exam } from './types';
 
-type View = 'dashboard' | 'quiz' | 'completed';
+type View = 'dashboard' | 'quiz' | 'completed' | 'home';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<View>('dashboard');
+  const [currentView, setCurrentView] = useState<View>('home');
+  const [activeExamId, setActiveExamId] = useState<number | null>(null);
   const [activeModule, setActiveModule] = useState<Module | null>(null);
   const [activeSubTopic, setActiveSubTopic] = useState<string | null>(null);
   const [completedModules, setCompletedModules] = useState<Set<number>>(new Set());
@@ -23,17 +24,17 @@ const App: React.FC = () => {
   const [questionBank, setQuestionBank] = useState<QuestionBank>({});
   const [moduleVisibility, setModuleVisibility] = useState<{ [moduleId: number]: boolean }>({});
   const [subTopicVisibility, setSubTopicVisibility] = useState<{ [moduleId: number]: { [subTopic: string]: boolean } }>({});
-  const [modules, setModules] = useState<Module[]>([]);
+  const [exams, setExams] = useState<Exam[]>([]);
 
   // Load data from local storage on initial render
   useEffect(() => {
-    // Load Modules
+    // Load Exams
     try {
-        const savedModules = localStorage.getItem('modules');
-        setModules(savedModules ? JSON.parse(savedModules) : INITIAL_MODULE_DATA);
+        const savedExams = localStorage.getItem('exams');
+        setExams(savedExams ? JSON.parse(savedExams) : INITIAL_EXAM_DATA);
     } catch(e) {
-        console.error("Failed to load modules from local storage", e);
-        setModules(INITIAL_MODULE_DATA);
+        console.error("Failed to load exams from local storage", e);
+        setExams(INITIAL_EXAM_DATA);
     }
     
     // Load Question Bank
@@ -46,10 +47,12 @@ const App: React.FC = () => {
       console.error("Failed to load question bank from local storage:", error);
     }
 
+    const allModules = INITIAL_EXAM_DATA.flatMap(e => e.modules);
+
     // Load Module Visibility
     try {
         const savedVisibility = localStorage.getItem('moduleVisibility');
-        const initialVisibility = INITIAL_MODULE_DATA.reduce((acc, module) => {
+        const initialVisibility = allModules.reduce((acc, module) => {
             acc[module.id] = true; // Default to visible
             return acc;
         }, {} as { [moduleId: number]: boolean });
@@ -62,14 +65,14 @@ const App: React.FC = () => {
         }
     } catch (error) {
         console.error("Failed to load module visibility settings:", error);
-        const defaultVisibility = INITIAL_MODULE_DATA.reduce((acc, module) => ({ ...acc, [module.id]: true }), {});
+        const defaultVisibility = allModules.reduce((acc, module) => ({ ...acc, [module.id]: true }), {});
         setModuleVisibility(defaultVisibility);
     }
     
     // Load Sub-Topic Visibility
     try {
         const savedSubTopicVisibility = localStorage.getItem('subTopicVisibility');
-        const initialSubTopicVisibility = INITIAL_MODULE_DATA.reduce((acc, module) => {
+        const initialSubTopicVisibility = allModules.reduce((acc, module) => {
             acc[module.id] = module.subTopics.reduce((subAcc, topic) => {
                 subAcc[topic] = true; // Default all to visible
                 return subAcc;
@@ -94,7 +97,7 @@ const App: React.FC = () => {
     } catch (error) {
          console.error("Failed to load sub-topic visibility settings:", error);
          // Initialize with defaults on error
-         const defaultVisibility = INITIAL_MODULE_DATA.reduce((acc, module) => {
+         const defaultVisibility = allModules.reduce((acc, module) => {
             acc[module.id] = module.subTopics.reduce((subAcc, topic) => ({ ...subAcc, [topic]: true }), {});
             return acc;
          }, {} as { [moduleId: number]: { [subTopic: string]: boolean } });
@@ -103,13 +106,12 @@ const App: React.FC = () => {
 
   }, []);
 
-  // Effect to save modules to local storage whenever they change
+  // Effect to save exams to local storage whenever they change
   useEffect(() => {
-    // Avoid saving during initial empty state
-    if (modules.length > 0) {
-        localStorage.setItem('modules', JSON.stringify(modules));
+    if (exams.length > 0) {
+        localStorage.setItem('exams', JSON.stringify(exams));
     }
-  }, [modules]);
+  }, [exams]);
 
 
   const handleStartQuiz = useCallback((module: Module, subTopic?: string) => {
@@ -190,10 +192,12 @@ const App: React.FC = () => {
   };
 
     const handleAddModule = useCallback((title: string) => {
-        if (!title || title.trim() === '') return;
+        if (!title || title.trim() === '' || !activeExamId) return;
 
-        setModules(prevModules => {
-            const newModuleId = prevModules.length > 0 ? Math.max(...prevModules.map(m => m.id)) + 1 : 1;
+        setExams(prevExams => {
+            const allModuleIds = prevExams.flatMap(e => e.modules.map(m => m.id));
+            const newModuleId = allModuleIds.length > 0 ? Math.max(...allModuleIds) + 1 : 1;
+
             const newModule: Module = {
                 id: newModuleId,
                 title: title.trim(),
@@ -214,46 +218,54 @@ const App: React.FC = () => {
                 return newVisibility;
             });
 
-            return [...prevModules, newModule];
+            return prevExams.map(exam => 
+                exam.id === activeExamId ? { ...exam, modules: [...exam.modules, newModule] } : exam
+            );
         });
-    }, []);
+    }, [activeExamId]);
     
     const handleEditModule = useCallback((moduleId: number, newTitle: string) => {
         if (!newTitle || newTitle.trim() === '') return;
-        setModules(prevModules => 
-            prevModules.map(module => 
-                module.id === moduleId ? { ...module, title: newTitle.trim() } : module
-            )
+        setExams(prevExams => 
+            prevExams.map(exam => ({
+                ...exam,
+                modules: exam.modules.map(module => 
+                    module.id === moduleId ? { ...module, title: newTitle.trim() } : module
+                )
+            }))
         );
     }, []);
 
     const handleAddSubTopic = useCallback((moduleId: number, subTopic: string) => {
         if (!subTopic || subTopic.trim() === '') return;
 
-        setModules(prevModules => 
-            prevModules.map(module => {
-                if (module.id === moduleId) {
-                    if (module.subTopics.includes(subTopic.trim())) {
-                        alert("Sub-topic with this name already exists in this module.");
-                        return module;
-                    }
-                    const updatedModule = {
-                        ...module,
-                        subTopics: [...module.subTopics, subTopic.trim()]
-                    };
+        setExams(prevExams => 
+            prevExams.map(exam => ({
+                ...exam,
+                modules: exam.modules.map(module => {
+                    if (module.id === moduleId) {
+                        if (module.subTopics.includes(subTopic.trim())) {
+                            alert("Sub-topic with this name already exists in this module.");
+                            return module;
+                        }
+                        const updatedModule = {
+                            ...module,
+                            subTopics: [...module.subTopics, subTopic.trim()]
+                        };
 
-                    setSubTopicVisibility(prev => {
-                        const newVisibility = JSON.parse(JSON.stringify(prev));
-                        if (!newVisibility[moduleId]) newVisibility[moduleId] = {};
-                        newVisibility[moduleId][subTopic.trim()] = true;
-                        localStorage.setItem('subTopicVisibility', JSON.stringify(newVisibility));
-                        return newVisibility;
-                    });
-                    
-                    return updatedModule;
-                }
-                return module;
-            })
+                        setSubTopicVisibility(prev => {
+                            const newVisibility = JSON.parse(JSON.stringify(prev));
+                            if (!newVisibility[moduleId]) newVisibility[moduleId] = {};
+                            newVisibility[moduleId][subTopic.trim()] = true;
+                            localStorage.setItem('subTopicVisibility', JSON.stringify(newVisibility));
+                            return newVisibility;
+                        });
+                        
+                        return updatedModule;
+                    }
+                    return module;
+                })
+            }))
         );
     }, []);
     
@@ -262,21 +274,24 @@ const App: React.FC = () => {
         if (!trimmedNewSubTopic || oldSubTopic === trimmedNewSubTopic) return;
 
         let conflict = false;
-        setModules(prevModules =>
-            prevModules.map(module => {
-                if (module.id === moduleId) {
-                    if (module.subTopics.includes(trimmedNewSubTopic)) {
-                        alert("A sub-topic with this name already exists in this module.");
-                        conflict = true;
-                        return module;
+        setExams(prevExams =>
+            prevExams.map(exam => ({
+                ...exam,
+                modules: exam.modules.map(module => {
+                    if (module.id === moduleId) {
+                        if (module.subTopics.includes(trimmedNewSubTopic)) {
+                            alert("A sub-topic with this name already exists in this module.");
+                            conflict = true;
+                            return module;
+                        }
+                        return {
+                            ...module,
+                            subTopics: module.subTopics.map(st => st === oldSubTopic ? trimmedNewSubTopic : st)
+                        };
                     }
-                    return {
-                        ...module,
-                        subTopics: module.subTopics.map(st => st === oldSubTopic ? trimmedNewSubTopic : st)
-                    };
-                }
-                return module;
-            })
+                    return module;
+                })
+            }))
         );
         
         if (conflict) return;
@@ -301,6 +316,20 @@ const App: React.FC = () => {
             return newVisibility;
         });
 
+    }, []);
+
+    const handleAddExam = useCallback((title: string, description: string) => {
+        if (!title.trim() || !description.trim()) return;
+        setExams(prevExams => {
+            const newExamId = prevExams.length > 0 ? Math.max(...prevExams.map(e => e.id)) + 1 : 1;
+            const newExam: Exam = {
+                id: newExamId,
+                title: title.trim(),
+                description: description.trim(),
+                modules: [],
+            };
+            return [...prevExams, newExam];
+        });
     }, []);
 
   const handleExportQuestions = useCallback(() => {
@@ -405,6 +434,18 @@ const App: React.FC = () => {
     };
     reader.readAsText(file);
   }, [questionBank, updateQuestionBank]);
+  
+  const handleSelectExam = (examId: number) => {
+    setActiveExamId(examId);
+    setCurrentView('dashboard');
+  };
+
+  const handleReturnToHome = () => {
+    setActiveExamId(null);
+    setCurrentView('home');
+  };
+
+  const activeExam = useMemo(() => exams.find(e => e.id === activeExamId), [exams, activeExamId]);
 
   const renderContent = () => {
     if (isQuestionManagerOpen && activeModule && activeSubTopic) {
@@ -423,9 +464,10 @@ const App: React.FC = () => {
       case 'completed':
         return activeModule && <QuizCompletedView moduleTitle={activeSubTopic || activeModule.title} onReturnToDashboard={handleReturnToDashboard} />;
       case 'dashboard':
-      default:
-        return <Dashboard 
-                  modules={modules} 
+        if (activeExam) {
+            return <Dashboard 
+                  examTitle={activeExam.title}
+                  modules={activeExam.modules} 
                   completedModules={completedModules} 
                   onStartQuiz={handleStartQuiz} 
                   onResetProgress={handleResetProgress}
@@ -445,7 +487,24 @@ const App: React.FC = () => {
                   onEditModule={handleEditModule}
                   onAddSubTopic={handleAddSubTopic}
                   onEditSubTopic={handleEditSubTopic}
+                  onReturnToHome={handleReturnToHome}
                 />;
+        }
+        // Fallback to home if no active exam
+        setCurrentView('home');
+        setActiveExamId(null);
+        return null;
+
+      case 'home':
+      default:
+        return <Home 
+            exams={exams}
+            onSelectExam={handleSelectExam}
+            isAdmin={isAdmin}
+            onAddExam={handleAddExam}
+            onAdminLoginClick={() => setLoginModalOpen(true)}
+            onLogout={handleLogout}
+        />;
     }
   };
 

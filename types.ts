@@ -6,6 +6,13 @@ export interface Module {
   subTopics: string[];
 }
 
+export interface Exam {
+  id: number;
+  title: string;
+  description: string;
+  modules: Module[];
+}
+
 export interface Question {
   id: string; // Unique identifier for each question
   question: string;

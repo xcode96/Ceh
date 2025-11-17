@@ -1,7 +1,6 @@
+import type { Module, Exam } from './types';
 
-import type { Module } from './types';
-
-export const INITIAL_MODULE_DATA: Module[] = [
+const CEH_MODULES: Module[] = [
     {
         id: 1,
         title: "Introduction to Ethical Hacking",
@@ -141,5 +140,79 @@ export const INITIAL_MODULE_DATA: Module[] = [
         icon: 'lock',
         color: "bg-stone-100 text-stone-600",
         subTopics: ["Encryption types", "Hashing algorithms", "Digital signatures", "SSL/TLS", "Steganography", "Kerberos", "Disk encryption", "Email encryption", "Cryptanalysis techniques"]
+    }
+];
+
+const CISSP_MODULES: Module[] = [
+    {
+        id: 21,
+        title: "Security & Risk Management",
+        icon: 'shield',
+        color: "bg-gray-100 text-gray-600",
+        subTopics: ["CIA Triad", "Due care / Due diligence", "Security governance", "Security roles & responsibilities", "Threat modeling", "Information security management", "Policies, standards, procedures, guidelines", "Security frameworks (ISO 27001, NIST CSF, NIST 800-53)", "Governance vs Management", "Control types (Administrative/Technical/Physical)", "Control functions (Preventive, Detective, Corrective)", "Legal systems: Civil, Common, Religious, Customary", "Cyber laws", "Privacy laws (GDPR, HIPAA, CCPA)", "Intellectual Property laws", "Computer Crime laws", "Contracting & procurement", "Licensing agreements", "Risk identification", "Risk analysis", "Risk treatment", "Risk registers", "Threat modeling (STRIDE, DREAD, PASTA)", "Business Impact Analysis (BIA)", "MTD, RTO, RPO, WRT", "Continuity planning", "Alternate sites", "DR strategy", "Backup types", "Recovery phasing", "DR Plan testing", "Background checks", "Onboarding security", "Employee agreements (NDA, AUP)", "Separation of duties (SoD)", "Job rotation", "Termination process", "Training levels", "Social engineering prevention", "Role-based security education"]
+    },
+    {
+        id: 22,
+        title: "Asset Security",
+        icon: 'database',
+        color: "bg-slate-100 text-slate-600",
+        subTopics: ["Data Classification", "Data Ownership Roles", "Privacy Protection", "Data Lifecycle", "Secure Data Storage", "Secure Data Destruction", "Media Security"]
+    },
+    {
+        id: 23,
+        title: "Security Architecture & Engineering",
+        icon: 'server',
+        color: "bg-red-100 text-red-600",
+        subTopics: ["Secure Design Principles", "Security Models", "Security Architecture Frameworks", "Cryptography", "Physical Security", "Secure Hardware", "Embedded Systems", "Virtualization & Cloud"]
+    },
+    {
+        id: 24,
+        title: "Communication & Network Security",
+        icon: 'wifi',
+        color: "bg-orange-100 text-orange-600",
+        subTopics: ["Network Architecture", "Secure Communication Channels", "Network Devices", "Wireless Networks", "Attack & Defense", "VoIP, VPN, Mobile Networks"]
+    },
+    {
+        id: 25,
+        title: "Identity & Access Management",
+        icon: 'key',
+        color: "bg-amber-100 text-amber-600",
+        subTopics: ["Identification & Authentication", "Access Control Models", "Identity Federation", "Identity Lifecycle", "Access Attacks"]
+    },
+    {
+        id: 26,
+        title: "Security Assessment & Testing",
+        icon: 'scan',
+        color: "bg-yellow-100 text-yellow-600",
+        subTopics: ["Assessment Types", "Testing Techniques", "Security Controls Testing", "Log Review & Security Monitoring", "Reporting"]
+    },
+    {
+        id: 27,
+        title: "Security Operations",
+        icon: 'shield-check',
+        color: "bg-lime-100 text-lime-600",
+        subTopics: ["Incident Response", "Digital Forensics", "Change & Configuration Management", "Patch Management", "Logging & Monitoring", "Physical & Environmental Operations", "Recovery Strategies"]
+    },
+    {
+        id: 28,
+        title: "Software Development Security",
+        icon: 'code-bracket',
+        color: "bg-green-100 text-green-600",
+        subTopics: ["Software Development Models", "Threat Modeling", "Secure Coding", "Software Security Testing", "Databases & Big Data", "CI/CD Pipeline"]
+    }
+];
+
+export const INITIAL_EXAM_DATA: Exam[] = [
+    {
+        id: 1,
+        title: "CEH v13",
+        description: "Certified Ethical Hacker v13 training modules covering everything from footprinting to cryptography.",
+        modules: CEH_MODULES
+    },
+    {
+        id: 2,
+        title: "CISSP",
+        description: "Certified Information Systems Security Professional modules covering security and risk management, asset security, and more.",
+        modules: CISSP_MODULES
     }
 ];

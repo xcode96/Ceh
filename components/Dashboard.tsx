@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import ProgressCircle from './ProgressCircle';
 import ModuleListItem from './ModuleListItem';
@@ -6,6 +5,7 @@ import Icon from './Icon';
 import type { Module } from '../types';
 
 interface DashboardProps {
+  examTitle: string;
   modules: Module[];
   completedModules: Set<number>;
   onStartQuiz: (module: Module, subTopic?: string) => void;
@@ -26,15 +26,16 @@ interface DashboardProps {
   onEditModule: (moduleId: number, newTitle: string) => void;
   onAddSubTopic: (moduleId: number, subTopic: string) => void;
   onEditSubTopic: (moduleId: number, oldSubTopic: string, newSubTopic: string) => void;
+  onReturnToHome: () => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
-  modules, completedModules, onStartQuiz, onResetProgress, 
+  examTitle, modules, completedModules, onStartQuiz, onResetProgress, 
   isAdmin, onAdminLoginClick, onLogout, onManageQuestions, 
   onExportQuestions, onImportQuestions, onExportSubTopic, onImportSubTopic,
   moduleVisibility, onToggleModuleVisibility,
   subTopicVisibility, onToggleSubTopicVisibility,
-  onAddModule, onEditModule, onAddSubTopic, onEditSubTopic
+  onAddModule, onEditModule, onAddSubTopic, onEditSubTopic, onReturnToHome
 }) => {
   const completedCount = completedModules.size;
   const totalModules = modules.length;
@@ -116,7 +117,12 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Right Content */}
       <main className="w-full lg:w-3/4 p-6 lg:p-10 bg-slate-50/50 overflow-y-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">{isAdmin ? 'Manage Training Modules' : 'Training Modules'}</h1>
+        <div className="flex items-center mb-8">
+            <button onClick={onReturnToHome} className="p-2 rounded-full hover:bg-gray-200 mr-4" aria-label="Back to exams list">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            </button>
+            <h1 className="text-3xl font-bold text-gray-800">{isAdmin ? `Manage Modules: ${examTitle}` : `Training Modules: ${examTitle}`}</h1>
+        </div>
         <div className="space-y-4">
           {visibleModules.map(module => (
             <ModuleListItem 
