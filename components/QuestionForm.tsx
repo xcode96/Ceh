@@ -11,6 +11,7 @@ const QuestionForm: React.FC<QuestionFormProps> = ({ initialQuestion, onSubmit, 
   const [questionText, setQuestionText] = useState('');
   const [options, setOptions] = useState(['', '', '', '']);
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState(0);
+  const [explanation, setExplanation] = useState('');
 
   useEffect(() => {
     if (initialQuestion) {
@@ -18,6 +19,7 @@ const QuestionForm: React.FC<QuestionFormProps> = ({ initialQuestion, onSubmit, 
       setOptions(initialQuestion.options);
       const correctIndex = initialQuestion.options.indexOf(initialQuestion.correctAnswer);
       setCorrectAnswerIndex(correctIndex > -1 ? correctIndex : 0);
+      setExplanation(initialQuestion.explanation || '');
     }
   }, [initialQuestion]);
 
@@ -38,6 +40,7 @@ const QuestionForm: React.FC<QuestionFormProps> = ({ initialQuestion, onSubmit, 
       question: questionText,
       options: options,
       correctAnswer: options[correctAnswerIndex],
+      explanation: explanation.trim() ? explanation.trim() : undefined,
     };
     onSubmit(newQuestion);
   };
@@ -76,6 +79,17 @@ const QuestionForm: React.FC<QuestionFormProps> = ({ initialQuestion, onSubmit, 
                     />
                 </div>
             ))}
+        </div>
+        <div>
+            <label className="block text-sm font-medium text-gray-700">Manual Explanation (Optional)</label>
+            <p className="text-xs text-gray-500 mb-1">If you provide an explanation here, it will be shown to the user instead of an AI-generated one.</p>
+            <textarea
+                value={explanation}
+                onChange={(e) => setExplanation(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                rows={4}
+                placeholder="Explain why the correct answer is right and the others are wrong..."
+            />
         </div>
         <div className="flex justify-end gap-3">
             <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200">

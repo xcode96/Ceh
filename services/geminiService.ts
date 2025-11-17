@@ -170,7 +170,7 @@ export const generateQuestionSuggestions = async (moduleTitle: string, subTopic:
 };
 
 
-export const generateExplanationForAnswer = async (question: string, correctAnswer: string): Promise<string> => {
+export const generateExplanationForQuestion = async (question: string, options: string[]): Promise<string> => {
     if (!process.env.API_KEY) {
         return "Gemini API key not configured. Cannot provide explanation.";
     }
@@ -178,13 +178,59 @@ export const generateExplanationForAnswer = async (question: string, correctAnsw
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const prompt = `
             You are a cybersecurity expert tutor.
-            A student has answered a quiz question.
+            A student is looking at the following quiz question and needs help understanding the concept behind it without getting the answer.
             Question: "${question}"
+            The options are: ${options.join(', ')}.
+
+            Please provide a clear and concise explanation of the core concept or topic this question is testing. Explain any key terms if necessary.
+            IMPORTANT: DO NOT reveal which option is correct or even hint at it. Your goal is to help the student understand the question itself, not to give them the answer.
+            Keep the tone helpful and educational. The explanation should be a single paragraph.
+        `;
+
+        const responsePromise = ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+
+        const response: GenerateContentResponse = await fetchWithTimeout(responsePromise, 8000);
+        return response.text;
+
+    } catch (error) {
+        console.error('Error generating question explanation with Gemini:', error);
+        throw new Error("Failed to generate question explanation.");
+    }
+};
+
+
+export const generateExplanationForAnswer = async (question: string, correctAnswer: string, userAnswer: string): Promise<string> => {
+    if (!process.env.API_KEY) {
+        return "Gemini API key not configured. Cannot provide explanation.";
+    }
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const isCorrect = correctAnswer === userAnswer;
+
+        const prompt = isCorrect 
+        ? `
+            You are a cybersecurity expert tutor.
+            A student correctly answered a quiz question.
+            Question: "${question}"
+            Their correct answer was: "${userAnswer}"
+            
+            Please provide a positive and concise explanation that reinforces why their answer is correct. 
+            Briefly elaborate on the concept to solidify their understanding.
+            Keep the tone encouraging and educational. The explanation should be a single paragraph.
+        `
+        : `
+            You are a cybersecurity expert tutor.
+            A student answered a quiz question incorrectly.
+            Question: "${question}"
+            They chose: "${userAnswer}"
             The correct answer is: "${correctAnswer}"
             
-            Please provide a clear and concise explanation for why this is the correct answer. 
-            If relevant, you can briefly mention why other potential options might be incorrect.
-            Keep the tone helpful and educational. The explanation should be a single paragraph.
+            Please provide a clear and concise explanation. First, explain why their choice ("${userAnswer}") is incorrect. Then, explain why "${correctAnswer}" is the correct answer.
+            This will help them learn from their mistake.
+            Keep the tone helpful and educational, not critical. The explanation should be one to two paragraphs.
         `;
 
         const responsePromise = ai.models.generateContent({

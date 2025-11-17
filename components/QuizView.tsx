@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Module, Question, QuestionBank } from '../types';
-import { generateQuestionsForModule, generateExplanationForAnswer } from '../services/geminiService';
+import { generateQuestionsForModule, generateExplanationForAnswer, generateExplanationForQuestion } from '../services/geminiService';
 import Icon from './Icon';
 
 interface QuizViewProps {
@@ -24,6 +24,8 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
   const [answerChecked, setAnswerChecked] = useState<boolean>(false);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [isExplanationLoading, setIsExplanationLoading] = useState<boolean>(false);
+  const [questionExplanation, setQuestionExplanation] = useState<string | null>(null);
+  const [isQuestionExplanationLoading, setIsQuestionExplanationLoading] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,12 +69,20 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
     if (!selectedAnswer) return;
 
     setAnswerChecked(true);
+    const currentQuestion = questions[currentQuestionIndex];
+
+    // Use manual explanation if available
+    if (currentQuestion.explanation && currentQuestion.explanation.trim() !== '') {
+      setExplanation(currentQuestion.explanation);
+      return; // Done. No loading, no API call.
+    }
+    
+    // Otherwise, fetch from API
     setIsExplanationLoading(true);
     setExplanation(null);
-
     try {
-        const { question, correctAnswer } = questions[currentQuestionIndex];
-        const generatedExplanation = await generateExplanationForAnswer(question, correctAnswer);
+        const { question, correctAnswer } = currentQuestion;
+        const generatedExplanation = await generateExplanationForAnswer(question, correctAnswer, selectedAnswer);
         setExplanation(generatedExplanation);
     } catch (err) {
         setExplanation("Sorry, we couldn't generate an explanation at this time.");
@@ -81,12 +91,28 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
     }
   };
   
+  const handleExplainQuestion = async () => {
+    setIsQuestionExplanationLoading(true);
+    setQuestionExplanation(null);
+
+    try {
+        const { question, options } = questions[currentQuestionIndex];
+        const generatedExplanation = await generateExplanationForQuestion(question, options);
+        setQuestionExplanation(generatedExplanation);
+    } catch (err) {
+        setQuestionExplanation("Sorry, we couldn't generate an explanation for this question at this time.");
+    } finally {
+        setIsQuestionExplanationLoading(false);
+    }
+  };
+
   const handleNextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
       setSelectedAnswer(null);
       setAnswerChecked(false);
       setExplanation(null);
+      setQuestionExplanation(null);
     } else {
       onCompleteQuiz(module.id);
     }
@@ -158,6 +184,20 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
 
       <h3 className="text-xl font-bold text-gray-800 my-8 text-center">{currentQuestion.question}</h3>
       
+      { (isQuestionExplanationLoading || questionExplanation) && (
+         <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+           <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
+             <Icon iconName="sparkles" className="h-5 w-5 text-indigo-500" />
+             Hint
+           </h4>
+           {isQuestionExplanationLoading ? (
+             <p className="text-gray-600 animate-pulse">Gemini is thinking...</p>
+           ) : (
+             <p className="text-gray-600 text-sm">{questionExplanation}</p>
+           )}
+         </div>
+      )}
+
       <div className="space-y-4">
         {currentQuestion.options.map((option, index) => (
           <button
@@ -174,7 +214,7 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
       {answerChecked && (
          <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
            <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
-             <Icon iconName="sparkles" className="h-5 w-5 text-indigo-500" />
+             <Icon iconName={currentQuestion.explanation ? 'book-open' : 'sparkles'} className={`h-5 w-5 ${currentQuestion.explanation ? 'text-green-500' : 'text-indigo-500'}`} />
              Explanation
            </h4>
            {isExplanationLoading ? (
@@ -186,13 +226,22 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
       )}
 
       {!answerChecked ? (
-        <button
-          onClick={handleCheckAnswer}
-          disabled={!selectedAnswer}
-          className="w-full mt-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-        >
-          Check Answer
-        </button>
+        <div className="flex flex-col sm:flex-row items-center gap-4 mt-8">
+          <button
+            onClick={handleExplainQuestion}
+            disabled={isQuestionExplanationLoading || !!questionExplanation}
+            className="w-full sm:w-1/2 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 disabled:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isQuestionExplanationLoading ? 'Thinking...' : 'Explain Question'}
+          </button>
+          <button
+            onClick={handleCheckAnswer}
+            disabled={!selectedAnswer}
+            className="w-full sm:w-1/2 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            Check Answer
+          </button>
+        </div>
       ) : (
         <button
           onClick={handleNextQuestion}
