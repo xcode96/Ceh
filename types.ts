@@ -32,6 +32,29 @@ export type QuestionBank = {
   };
 };
 
+export interface UserAnswer {
+    questionId: string;
+    selectedAnswer: string;
+    correctAnswer: string;
+    isCorrect: boolean;
+}
+
+export interface QuizResult {
+    score: number;
+    correctCount: number;
+    totalQuestions: number;
+    avgTimePerQuestion: number; // in seconds
+    totalTime: number; // in seconds
+    userAnswers: UserAnswer[];
+}
+
+export interface QuizAttempt extends QuizResult {
+    moduleId: number;
+    moduleTitle: string;
+    topicTitle: string;
+    timestamp: string;
+}
+
 export type IconName = 
   'key' | 'shield' | 'mail' | 'smartphone' | 
   'lock' | 'alert' | 'users' | 'shield-check' | 

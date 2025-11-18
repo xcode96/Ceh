@@ -1,5 +1,4 @@
 import React, { useRef } from 'react';
-import ProgressCircle from './ProgressCircle';
 import ModuleListItem from './ModuleListItem';
 import Icon from './Icon';
 import type { Module, QuestionBank } from '../types';
@@ -7,9 +6,8 @@ import type { Module, QuestionBank } from '../types';
 interface DashboardProps {
   examTitle: string;
   modules: Module[];
-  completedModules: Set<number>;
   onConfigureQuiz: (module: Module, subTopic?: string, contentPoint?: string) => void;
-  onResetProgress: () => void;
+  onViewProgress: () => void;
   isAdmin: boolean;
   onAdminLoginClick: () => void;
   onLogout: () => void;
@@ -22,7 +20,7 @@ interface DashboardProps {
   onToggleModuleVisibility: (moduleId: number) => void;
   subTopicVisibility: { [moduleId: number]: { [subTopic: string]: boolean } };
   onToggleSubTopicVisibility: (moduleId: number, subTopic: string) => void;
-  contentPointVisibility: { [moduleId: number]: { [subTopic: string]: { [contentPoint: string]: boolean } } };
+  contentPointVisibility: { [moduleId: number]: { [contentPoint: string]: { [contentPoint: string]: boolean } } };
   onToggleContentPointVisibility: (moduleId: number, subTopic: string, contentPoint: string) => void;
   onAddModule: (title: string) => void;
   onEditModule: (moduleId: number, newTitle: string) => void;
@@ -33,7 +31,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
-  examTitle, modules, completedModules, onConfigureQuiz, onResetProgress, 
+  examTitle, modules, onConfigureQuiz, onViewProgress, 
   isAdmin, onAdminLoginClick, onLogout, onManageQuestions, 
   onExportQuestions, onImportQuestions, onExportTopic, onImportTopic,
   moduleVisibility, onToggleModuleVisibility,
@@ -41,9 +39,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   contentPointVisibility, onToggleContentPointVisibility,
   onAddModule, onEditModule, onAddSubTopic, onEditSubTopic, questionBank, onReturnToHome
 }) => {
-  const completedCount = completedModules.size;
-  const totalModules = modules.length;
-  const progressPercentage = totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0;
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const handleImportClick = () => {
@@ -60,34 +55,26 @@ const Dashboard: React.FC<DashboardProps> = ({
   const visibleModules = isAdmin ? modules : modules.filter(m => moduleVisibility[m.id] !== false);
 
   return (
-    <div className="w-full max-w-7xl mx-auto bg-white rounded-2xl shadow-xl flex flex-col lg:flex-row overflow-hidden" style={{ minHeight: '90vh' }}>
+    <div className="w-full max-w-7xl mx-auto bg-white rounded-2xl shadow-xl flex flex-col lg:flex-row overflow-hidden border border-gray-200" style={{ minHeight: '90vh' }}>
       {/* Left Sidebar */}
-      <aside className="w-full lg:w-1/4 bg-white p-6 lg:p-8 border-b lg:border-r border-gray-100 flex flex-col items-center text-center">
+      <aside className="w-full lg:w-1/4 bg-gray-50 p-6 lg:p-8 border-b lg:border-r border-gray-200 flex flex-col items-center text-center">
         <h2 className="text-sm text-gray-500">Welcome</h2>
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">{isAdmin ? 'Admin User' : 'XCODE96'}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">{isAdmin ? 'Admin User' : 'XCODE96'}</h1>
         
-        {!isAdmin && (
-          <>
-            <ProgressCircle progress={progressPercentage} />
-            <div className="flex justify-between w-full max-w-[200px] mt-6 text-sm">
-              <div className="text-center">
-                <p className="font-bold text-gray-700">Modules Done</p>
-                <p className="text-gray-500">{completedCount}/{totalModules}</p>
-              </div>
-              <div className="text-center">
-                <p className="font-bold text-gray-700">Modules Left</p>
-                <p className="text-gray-500">{totalModules - completedCount}</p>
-              </div>
-            </div>
-          </>
-        )}
-        {isAdmin && <p className="text-gray-600 bg-indigo-50 p-3 rounded-lg">You are in Admin Mode.</p>}
+        <div className="text-gray-600 bg-gray-200/60 p-4 rounded-lg w-full">
+            <p className="text-sm">Track your performance, identify weak areas, and monitor improvement over time.</p>
+             <button onClick={onViewProgress} className="mt-4 w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg hover:opacity-90 transition-opacity duration-300">
+                View My Progress
+            </button>
+        </div>
+        
+        {isAdmin && <p className="text-indigo-700 bg-indigo-100 p-3 rounded-lg mt-6 w-full">You are in Admin Mode.</p>}
 
         <div className="mt-auto w-full space-y-3 pt-6">
-            <button onClick={isAdmin ? onLogout : onAdminLoginClick} className="w-full py-3 px-4 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors duration-300">
+            <button onClick={isAdmin ? onLogout : onAdminLoginClick} className="w-full py-3 px-4 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors duration-300">
                 {isAdmin ? 'Logout' : 'Admin Login'}
             </button>
-            {isAdmin ? (
+            {isAdmin && (
               <>
                 <input
                   type="file"
@@ -105,27 +92,17 @@ const Dashboard: React.FC<DashboardProps> = ({
                   Export All Questions
                 </button>
               </>
-            ) : (
-              <>
-                <button onClick={onResetProgress} className="w-full py-3 px-4 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors duration-300">
-                    Reset Progress
-                </button>
-                <button className="w-full py-3 px-4 bg-pink-500 text-white font-semibold rounded-lg hover:bg-pink-600 transition-colors duration-300 flex items-center justify-center gap-2">
-                    <Icon iconName="download" className="h-5 w-5"/>
-                    Export Progress
-                </button>
-              </>
             )}
         </div>
       </aside>
 
       {/* Right Content */}
-      <main className="w-full lg:w-3/4 p-6 lg:p-10 bg-slate-50/50 overflow-y-auto">
+      <main className="w-full lg:w-3/4 p-6 lg:p-10 overflow-y-auto">
         <div className="flex items-center mb-8">
-            <button onClick={onReturnToHome} className="p-2 rounded-full hover:bg-gray-200 mr-4" aria-label="Back to exams list">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            <button onClick={onReturnToHome} className="p-2 rounded-full hover:bg-gray-100 mr-4" aria-label="Back to exams list">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
             </button>
-            <h1 className="text-3xl font-bold text-gray-800">{isAdmin ? `Manage Modules: ${examTitle}` : `Training Modules: ${examTitle}`}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{isAdmin ? `Manage Modules: ${examTitle}` : `Training Modules: ${examTitle}`}</h1>
         </div>
         <div className="space-y-4">
           {visibleModules.map(module => (
@@ -133,7 +110,6 @@ const Dashboard: React.FC<DashboardProps> = ({
               key={module.id} 
               module={module}
               questionBank={questionBank}
-              status={completedModules.has(module.id) ? 'completed' : 'not-started'} 
               onConfigure={(subTopic, contentPoint) => onConfigureQuiz(module, subTopic, contentPoint)}
               isAdmin={isAdmin}
               onManage={(subTopic, contentPoint) => onManageQuestions(module, subTopic, contentPoint)}
@@ -158,7 +134,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </button>
             </div>
         )}
-        {!isAdmin && <p className="text-center text-gray-400 mt-10 text-sm">Complete all modules to unlock your final report.</p>}
+        {!isAdmin && <p className="text-center text-gray-500 mt-10 text-sm">Every expert was once a beginner. Keep studying!</p>}
       </main>
     </div>
   );

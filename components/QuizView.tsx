@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import type { Module, Question } from '../types';
+import React, { useState, useEffect } from 'react';
+import type { Module, Question, QuizResult, UserAnswer } from '../types';
 import Icon from './Icon';
 
 interface QuizViewProps {
@@ -7,7 +7,7 @@ interface QuizViewProps {
   subTopic?: string | null;
   contentPoint?: string | null;
   questions: Question[];
-  onCompleteQuiz: (moduleId: number) => void;
+  onCompleteQuiz: (result: QuizResult) => void;
 }
 
 const MarkdownRenderer: React.FC<{ text: string | null }> = ({ text }) => {
@@ -51,7 +51,6 @@ const MarkdownRenderer: React.FC<{ text: string | null }> = ({ text }) => {
     );
   }).filter(Boolean);
 
-  // FIX: Replaced JSX.Element with React.JSX.Element to resolve namespace error.
   const groupedElements: React.JSX.Element[] = [];
   let currentList: React.JSX.Element[] = [];
 
@@ -63,7 +62,6 @@ const MarkdownRenderer: React.FC<{ text: string | null }> = ({ text }) => {
         groupedElements.push(<ul key={`ul-${i}`} className="space-y-1 mt-2">{currentList}</ul>);
         currentList = [];
       }
-      // FIX: Replaced JSX.Element with React.JSX.Element to resolve namespace error.
       groupedElements.push(el as React.JSX.Element);
     }
   });
@@ -80,6 +78,12 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [answerChecked, setAnswerChecked] = useState<boolean>(false);
   const [explanation, setExplanation] = useState<string | null>(null);
+  const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
+  const [startTime, setStartTime] = useState<number>(0);
+
+  useEffect(() => {
+    setStartTime(Date.now());
+  }, []);
   
   const quizTitle = contentPoint 
     ? `${subTopic}: ${contentPoint}` 
@@ -90,14 +94,52 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
 
   const handleCheckAnswer = () => {
     if (!selectedAnswer) return;
-
     setAnswerChecked(true);
-    const currentQuestion = questions[currentQuestionIndex];
 
-    // Use manual explanation if available
+    const currentQuestion = questions[currentQuestionIndex];
+    const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+
+    setUserAnswers(prev => [...prev, {
+      questionId: currentQuestion.id,
+      selectedAnswer: selectedAnswer,
+      correctAnswer: currentQuestion.correctAnswer,
+      isCorrect: isCorrect
+    }]);
+
     if (currentQuestion.explanation && currentQuestion.explanation.trim() !== '') {
       setExplanation(currentQuestion.explanation);
     }
+  };
+
+  const finishQuiz = () => {
+      const endTime = Date.now();
+      const totalTime = Math.round((endTime - startTime) / 1000); // in seconds
+      const finalAnswers = [...userAnswers];
+      
+      // Handle the last question if it wasn't "checked"
+       if (selectedAnswer && !answerChecked) {
+            const currentQuestion = questions[currentQuestionIndex];
+            finalAnswers.push({
+                questionId: currentQuestion.id,
+                selectedAnswer: selectedAnswer,
+                correctAnswer: currentQuestion.correctAnswer,
+                isCorrect: selectedAnswer === currentQuestion.correctAnswer
+            });
+      }
+
+      const correctCount = finalAnswers.filter(a => a.isCorrect).length;
+      const totalQuestions = questions.length;
+      const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+
+      const result: QuizResult = {
+        score,
+        correctCount,
+        totalQuestions,
+        totalTime,
+        avgTimePerQuestion: totalQuestions > 0 ? parseFloat((totalTime / totalQuestions).toFixed(1)) : 0,
+        userAnswers: finalAnswers
+      };
+      onCompleteQuiz(result);
   };
 
   const handleNextQuestion = () => {
@@ -107,7 +149,7 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
       setAnswerChecked(false);
       setExplanation(null);
     } else {
-      onCompleteQuiz(module.id);
+      finishQuiz();
     }
   };
   
@@ -115,7 +157,9 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
     return (
         <div className="text-center p-10 bg-white rounded-xl shadow-lg">
             <p className="text-gray-600 mb-4">No questions available for this topic. An admin may need to add them.</p>
-            <button onClick={() => onCompleteQuiz(module.id)} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            <button onClick={() => onCompleteQuiz({
+                score: 0, correctCount: 0, totalQuestions: 0, avgTimePerQuestion: 0, totalTime: 0, userAnswers: []
+            })} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
                 Return to Dashboard
             </button>
         </div>
@@ -193,7 +237,7 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
           onClick={handleNextQuestion}
           className="w-full mt-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
         >
-          {currentQuestionIndex < questions.length - 1 ? 'Next Question' : 'Finish Module'}
+          {currentQuestionIndex < questions.length - 1 ? 'Next Question' : 'Finish Quiz'}
         </button>
       )}
     </div>

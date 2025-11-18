@@ -1,16 +1,17 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
 import QuizView from './components/QuizView';
-import QuizCompletedView from './components/QuizCompletedView';
+import QuizResultsView from './components/QuizResultsView';
 import LoginView from './components/LoginView';
 import QuestionManager from './components/QuestionManager';
 import Home from './components/Home';
 import Footer from './components/Footer';
 import QuizCustomizationModal from './components/QuizCustomizationModal';
+import ProgressView from './components/ProgressView';
 import { INITIAL_EXAM_DATA } from './constants';
-import type { Module, QuestionBank, Question, Exam, SubTopic } from './types';
+import type { Module, QuestionBank, Question, Exam, SubTopic, QuizResult, QuizAttempt } from './types';
 
-type View = 'dashboard' | 'quiz' | 'completed' | 'home';
+type View = 'dashboard' | 'quiz' | 'results' | 'progress' | 'home';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('home');
@@ -19,8 +20,11 @@ const App: React.FC = () => {
   const [activeSubTopic, setActiveSubTopic] = useState<string | null>(null);
   const [activeContentPoint, setActiveContentPoint] = useState<string | null>(null);
   const [activeQuizQuestions, setActiveQuizQuestions] = useState<Question[]>([]);
-  const [completedModules, setCompletedModules] = useState<Set<number>>(new Set());
   
+  // Quiz Results & History
+  const [lastQuizResult, setLastQuizResult] = useState<QuizResult | null>(null);
+  const [quizHistory, setQuizHistory] = useState<QuizAttempt[]>([]);
+
   // Admin and Question Bank State
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoginModalOpen, setLoginModalOpen] = useState(false);
@@ -57,6 +61,16 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to load question bank from local storage:", error);
+    }
+
+    // Load Quiz History
+    try {
+      const savedHistory = localStorage.getItem('quizHistory');
+      if (savedHistory) {
+        setQuizHistory(JSON.parse(savedHistory));
+      }
+    } catch(error) {
+      console.error("Failed to load quiz history from local storage", error);
     }
 
     const allModules = INITIAL_EXAM_DATA.flatMap(e => e.modules);
@@ -168,6 +182,11 @@ const App: React.FC = () => {
     }
   }, [exams]);
 
+  // Effect to save quiz history to local storage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('quizHistory', JSON.stringify(quizHistory));
+  }, [quizHistory]);
+
   const getTopicIdentifier = (subTopic: string, contentPoint?: string | null) => {
     return contentPoint ? `${subTopic}::${contentPoint}` : subTopic;
   };
@@ -210,12 +229,21 @@ const App: React.FC = () => {
   }, [questionBank, quizSettings]);
 
 
-  const handleCompleteQuiz = useCallback((moduleId: number) => {
-    if (!activeSubTopic && !activeContentPoint) {
-      setCompletedModules(prev => new Set(prev).add(moduleId));
+  const handleCompleteQuiz = useCallback((result: QuizResult) => {
+    if (activeModule) {
+      const topicTitle = activeContentPoint || activeSubTopic || activeModule.title;
+      const attempt: QuizAttempt = {
+        ...result,
+        moduleId: activeModule.id,
+        moduleTitle: activeModule.title,
+        topicTitle: topicTitle,
+        timestamp: new Date().toISOString(),
+      };
+      setQuizHistory(prev => [attempt, ...prev]);
     }
-    setCurrentView('completed');
-  }, [activeSubTopic, activeContentPoint]);
+    setLastQuizResult(result);
+    setCurrentView('results');
+  }, [activeModule, activeSubTopic, activeContentPoint]);
 
   const handleReturnToDashboard = useCallback(() => {
     setActiveModule(null);
@@ -225,8 +253,14 @@ const App: React.FC = () => {
     setCurrentView('dashboard');
   }, []);
   
-  const handleResetProgress = useCallback(() => {
-    setCompletedModules(new Set());
+  const handleClearProgress = useCallback(() => {
+    if (window.confirm("Are you sure you want to clear all your progress? This action cannot be undone.")) {
+      setQuizHistory([]);
+    }
+  }, []);
+  
+  const handleViewProgress = useCallback(() => {
+    setCurrentView('progress');
   }, []);
 
   const handleAdminLogin = (success: boolean) => {
@@ -610,16 +644,26 @@ const App: React.FC = () => {
           questions={activeQuizQuestions}
           onCompleteQuiz={handleCompleteQuiz} 
         />;
-      case 'completed':
-        return activeModule && <QuizCompletedView moduleTitle={activeContentPoint || activeSubTopic || activeModule.title} onReturnToDashboard={handleReturnToDashboard} />;
+      case 'results':
+        return lastQuizResult && <QuizResultsView 
+            result={lastQuizResult} 
+            onReturnToDashboard={handleReturnToDashboard}
+            onViewProgress={handleViewProgress}
+        />;
+      case 'progress':
+          return <ProgressView 
+              quizHistory={quizHistory}
+              exams={exams}
+              onReturnToDashboard={handleReturnToDashboard}
+              onClearProgress={handleClearProgress}
+          />;
       case 'dashboard':
         if (activeExam) {
             return <Dashboard 
                   examTitle={activeExam.title}
                   modules={activeExam.modules} 
-                  completedModules={completedModules} 
                   onConfigureQuiz={handleConfigureQuiz} 
-                  onResetProgress={handleResetProgress}
+                  onViewProgress={handleViewProgress}
                   isAdmin={isAdmin}
                   onAdminLoginClick={() => setLoginModalOpen(true)}
                   onLogout={handleLogout}
@@ -661,7 +705,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-purple-50 flex flex-col justify-between p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-gray-100 flex flex-col justify-between p-4 sm:p-6 lg:p-8">
       <div className="flex-grow flex items-center justify-center w-full">
         {renderContent()}
       </div>

@@ -1,10 +1,9 @@
 import React, { useState, useRef, useMemo } from 'react';
 import Icon from './Icon';
-import type { Module, ModuleStatus, QuestionBank, SubTopic, Question } from '../types';
+import type { Module, QuestionBank, SubTopic, Question } from '../types';
 
 interface ModuleListItemProps {
   module: Module;
-  status: ModuleStatus;
   questionBank: QuestionBank;
   onConfigure: (subTopic?: string, contentPoint?: string) => void;
   isAdmin: boolean;
@@ -42,7 +41,7 @@ const ContentPointItem: React.FC<ContentPointItemProps> = ({ item, isAdmin, ques
     };
 
   return (
-    <li className={`text-sm text-gray-500 py-1 list-disc list-inside flex justify-between items-center group ${isAdmin && !isVisible ? 'opacity-40' : ''}`}>
+    <li className={`text-sm text-gray-600 py-1 list-disc list-inside flex justify-between items-center group ${isAdmin && !isVisible ? 'opacity-40' : ''}`}>
       <div className="flex items-center gap-2">
         <span>{item}</span>
         {!isAdmin && questionCount > 0 && (
@@ -57,7 +56,7 @@ const ContentPointItem: React.FC<ContentPointItemProps> = ({ item, isAdmin, ques
               <button
                   onClick={(e) => { e.stopPropagation(); onToggleVisibility(); }}
                   title={isVisible ? 'Hide topic' : 'Show topic'}
-                  className="p-1 text-gray-400 hover:text-gray-700"
+                  className="p-1 text-gray-500 hover:text-gray-800"
               >
                   <Icon iconName={isVisible ? 'eye' : 'eye-slash'} className="h-4 w-4" />
               </button>
@@ -65,10 +64,10 @@ const ContentPointItem: React.FC<ContentPointItemProps> = ({ item, isAdmin, ques
                   type="file" ref={importInputRef} className="hidden" accept=".json"
                   onChange={(e) => onImport(e)}
               />
-              <button onClick={handleImportClick} title={`Import questions for ${item}`} className="p-1 text-gray-400 hover:text-sky-600">
+              <button onClick={handleImportClick} title={`Import questions for ${item}`} className="p-1 text-gray-500 hover:text-sky-600">
                   <Icon iconName="upload" className="h-4 w-4" />
               </button>
-              <button onClick={(e) => { e.stopPropagation(); onExport(); }} title={`Export questions for ${item}`} className="p-1 text-gray-400 hover:text-pink-600">
+              <button onClick={(e) => { e.stopPropagation(); onExport(); }} title={`Export questions for ${item}`} className="p-1 text-gray-500 hover:text-pink-600">
                   <Icon iconName="download" className="h-4 w-4" />
               </button>
               <button 
@@ -83,7 +82,7 @@ const ContentPointItem: React.FC<ContentPointItemProps> = ({ item, isAdmin, ques
           <button
             onClick={(e) => { e.stopPropagation(); onConfigureQuiz(); }}
             disabled={questionCount === 0}
-            className="px-2 py-0.5 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-full hover:bg-indigo-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+            className="px-2 py-0.5 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-full hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed"
             aria-label={`Start quiz for ${item}`}
           >
             {questionCount > 0 ? 'Quiz' : 'No Qs'}
@@ -135,12 +134,12 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
     <li className={`flex flex-col rounded-md transition-all duration-200 group ${isAdmin && !isVisible ? 'opacity-40' : ''}`}>
       <div className={`flex items-start justify-between py-2 px-2 rounded-md`}>
         <div className="flex items-start gap-3">
-            <Icon iconName={'folder'} className="h-5 w-5 text-indigo-400 mt-px" />
+            <Icon iconName={'folder'} className="h-5 w-5 text-indigo-500 mt-px" />
             <div className="flex flex-col">
               <div className="flex items-center gap-1">
-                <span className="text-sm font-semibold text-gray-700">{topic.title}</span>
+                <span className="text-sm font-semibold text-gray-800">{topic.title}</span>
                 {isAdmin && (
-                    <button onClick={handleEdit} title="Edit sub-topic name" className="p-1 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={handleEdit} title="Edit sub-topic name" className="p-1 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Icon iconName="edit" className="h-3 w-3" />
                     </button>
                 )}
@@ -181,7 +180,7 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
                       onToggleVisibility();
                   }}
                   title={isVisible ? 'Hide sub-topic from users' : 'Show sub-topic to users'}
-                  className="p-1 text-gray-400 hover:text-gray-700"
+                  className="p-1 text-gray-500 hover:text-gray-800"
               >
                   <Icon iconName={isVisible ? 'eye' : 'eye-slash'} className="h-4 w-4" />
               </button>
@@ -192,10 +191,10 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
                 accept=".json"
                 onChange={(e) => onImport(e, topic.title)}
               />
-              <button onClick={handleImportClick} title={`Import questions for ${topic.title}`} className="p-1 text-gray-400 hover:text-sky-600 transition-colors">
+              <button onClick={handleImportClick} title={`Import questions for ${topic.title}`} className="p-1 text-gray-500 hover:text-sky-600 transition-colors">
                 <Icon iconName="upload" className="h-4 w-4" />
               </button>
-              <button onClick={(e) => { e.stopPropagation(); onExport(topic.title); }} title={`Export questions for ${topic.title}`} className="p-1 text-gray-400 hover:text-pink-600 transition-colors">
+              <button onClick={(e) => { e.stopPropagation(); onExport(topic.title); }} title={`Export questions for ${topic.title}`} className="p-1 text-gray-500 hover:text-pink-600 transition-colors">
                 <Icon iconName="download" className="h-4 w-4" />
               </button>
               <button 
@@ -211,7 +210,7 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
               <button
                 onClick={(e) => { e.stopPropagation(); onConfigureSubTopicQuiz(); }}
                 disabled={questionCount === 0}
-                className="px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-full hover:bg-indigo-200 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-full hover:bg-indigo-200 transition-colors disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed"
                 aria-label={`Start quiz for ${topic.title}`}
               >
                 Start Quiz
@@ -226,7 +225,7 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
 
 
 const ModuleListItem: React.FC<ModuleListItemProps> = ({ 
-    module, status, questionBank, onConfigure, isAdmin, onManage, onEdit, onExport, onImport, isVisible, 
+    module, questionBank, onConfigure, isAdmin, onManage, onEdit, onExport, onImport, isVisible, 
     onToggleVisibility, subTopicVisibility, onToggleSubTopicVisibility, 
     contentPointVisibility, onToggleContentPointVisibility,
     onAddSubTopic, onEditSubTopic
@@ -238,8 +237,6 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
     if (!moduleQuestions) {
       return 0;
     }
-    // FIX: Use a type guard to ensure questionsArray is an array before accessing its length property.
-    // FIX: Explicitly type the accumulator ('sum') to prevent TypeScript from inferring it as 'unknown' in complex scenarios.
     return Object.values(moduleQuestions).reduce((sum: number, questionsArray) => {
         if (Array.isArray(questionsArray)) {
             return sum + questionsArray.length;
@@ -265,30 +262,23 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
 
   const getStatusBadge = () => {
     if (isAdmin) {
-        return <span className="text-xs font-semibold text-indigo-600 bg-indigo-100 px-2 py-1 rounded-full">Admin Mode</span>;
+        return <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-2 py-1 rounded-full">Admin Mode</span>;
     }
-    switch (status) {
-      case 'completed':
-        return <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-full">Completed</span>;
-      case 'in-progress':
-        return <span className="text-xs font-semibold text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">In Progress</span>;
-      default:
-        return (
-            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                totalCustomQuestions > 0 
-                ? 'text-sky-600 bg-sky-100' 
-                : 'text-gray-500 bg-gray-100'
-            }`}>
-                {totalCustomQuestions} Question{totalCustomQuestions !== 1 ? 's' : ''}
-            </span>
-        );
-    }
+    return (
+        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+            totalCustomQuestions > 0 
+            ? 'text-sky-700 bg-sky-100' 
+            : 'text-gray-500 bg-gray-200'
+        }`}>
+            {totalCustomQuestions} Question{totalCustomQuestions !== 1 ? 's' : ''}
+        </span>
+    );
   };
 
   const visibleSubTopics = isAdmin ? module.subTopics : module.subTopics.filter(topic => subTopicVisibility[topic.title] !== false);
 
   return (
-    <div className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 ${isAdmin && !isVisible ? 'opacity-50' : ''}`}>
+    <div className={`bg-white rounded-xl shadow-sm hover:bg-gray-50 transition-all duration-300 border border-gray-200 ${isAdmin && !isVisible ? 'opacity-50' : ''}`}>
       <div 
         className="p-4 flex items-center justify-between cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -306,7 +296,7 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
                       onToggleVisibility();
                   }}
                   title={isVisible ? 'Hide module from users' : 'Show module to users'}
-                  className="p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-800"
+                  className="p-2 rounded-full hover:bg-gray-200 text-gray-500 hover:text-gray-800"
               >
                   <Icon iconName={isVisible ? 'eye' : 'eye-slash'} className="h-5 w-5" />
               </button>
@@ -316,28 +306,28 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-gray-800">{module.title}</h3>
+              <h3 className="font-bold text-gray-900">{module.title}</h3>
               {isAdmin && (
                 <button
                   onClick={handleEditClick}
                   title="Edit module title"
-                  className="p-1 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-700"
+                  className="p-1 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800"
                 >
                   <Icon iconName="edit" className="h-4 w-4" />
                 </button>
               )}
             </div>
-            <p className="text-sm text-gray-500">{module.subTopics.length} sub-topics</p>
+            <p className="text-sm text-gray-600">{module.subTopics.length} sub-topics</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
           {getStatusBadge()}
-          <Icon iconName="chevron-down" className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+          <Icon iconName="chevron-down" className={`h-5 w-5 text-gray-500 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
         </div>
       </div>
       
       {isExpanded && (
-        <div id={`module-content-${module.id}`} className="px-4 pb-4 pt-0 border-t border-gray-100">
+        <div id={`module-content-${module.id}`} className="px-4 pb-4 pt-0 border-t border-gray-200">
           <h4 className="text-sm font-semibold text-gray-700 my-3 px-2">Sub-Topics Covered:</h4>
            {visibleSubTopics.length > 0 ? (
             <ul className="space-y-1">
@@ -379,7 +369,7 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
            )}
            {isAdmin && (
                 <div className="mt-4 px-2">
-                    <button onClick={handleAddSubTopicClick} className="w-full py-2 border-2 border-dashed border-gray-200 text-gray-500 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+                    <button onClick={handleAddSubTopicClick} className="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-colors">
                         + Add New Sub-Topic
                     </button>
                 </div>
