@@ -1,3 +1,4 @@
+
 export interface SubTopic {
   title: string;
   content: string[];
@@ -34,9 +35,11 @@ export type QuestionBank = {
 
 export interface UserAnswer {
     questionId: string;
+    questionText: string;
     selectedAnswer: string;
     correctAnswer: string;
     isCorrect: boolean;
+    explanation?: string;
 }
 
 export interface QuizResult {

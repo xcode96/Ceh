@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { QuizResult } from '../types';
 import ProgressCircle from './ProgressCircle';
@@ -38,11 +39,14 @@ const ResultCard: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const QuizResultsView: React.FC<QuizResultsViewProps> = ({ result, onReturnToDashboard, onViewProgress }) => {
-    const { score, correctCount, totalQuestions, avgTimePerQuestion, totalTime } = result;
+    const { score, correctCount, totalQuestions, avgTimePerQuestion, totalTime, userAnswers } = result;
+    const incorrectCount = totalQuestions - correctCount;
     const speed = getSpeedLabel(avgTimePerQuestion);
+    
+    const incorrectAnswers = userAnswers.filter(a => !a.isCorrect);
 
     return (
-        <div className="w-full max-w-4xl bg-white p-8 sm:p-12 rounded-2xl shadow-xl text-center text-gray-800 border border-gray-200">
+        <div className="w-full max-w-4xl bg-white p-8 sm:p-12 rounded-2xl shadow-xl text-center text-gray-800 border border-gray-200 my-8">
             <h1 className="text-4xl font-bold mb-4">Quiz Results</h1>
             <p className="text-gray-600 mb-10">
                 <span className="text-purple-600 font-semibold">🔮 Every expert was once a beginner.</span> Keep studying!
@@ -74,7 +78,7 @@ const QuizResultsView: React.FC<QuizResultsViewProps> = ({ result, onReturnToDas
                         </div>
                     </div>
                     <p className={`font-bold text-lg ${getScoreColor(score)}`}>{score >= 50 ? 'Good Job!' : 'Keep Practicing'}</p>
-                    <p className="text-sm text-gray-500">{correctCount} of {totalQuestions} correct</p>
+                    <p className="text-sm text-gray-500">{correctCount} out of {totalQuestions} correct</p>
                 </ResultCard>
 
                 {/* Speed Card */}
@@ -87,16 +91,56 @@ const QuizResultsView: React.FC<QuizResultsViewProps> = ({ result, onReturnToDas
                     <p className="text-sm text-gray-500 mt-auto pt-4">Total: {formatTime(totalTime)}</p>
                 </ResultCard>
                 
-                {/* Accuracy Card */}
+                {/* Answer Breakdown Card */}
                 <ResultCard>
-                    <div className="text-6xl font-bold mb-4">
-                        {score}%
-                    </div>
-                     <p className="text-sm text-gray-500 mb-2">ACCURACY</p>
-                    <p className="font-bold text-xl text-sky-500">Questions Answered</p>
-                    <p className="text-sm text-gray-500 mt-auto pt-4">{totalQuestions} questions completed</p>
+                     <div className="flex w-full justify-around items-center mb-4 flex-grow">
+                        <div className="flex flex-col items-center">
+                             <span className="text-5xl font-bold text-green-500">{correctCount}</span>
+                             <span className="text-xs text-gray-500 font-bold uppercase mt-2">Correct</span>
+                        </div>
+                        <div className="w-px h-16 bg-gray-300"></div>
+                        <div className="flex flex-col items-center">
+                             <span className="text-5xl font-bold text-red-500">{incorrectCount}</span>
+                             <span className="text-xs text-gray-500 font-bold uppercase mt-2">Wrong</span>
+                        </div>
+                     </div>
+                     <p className="text-sm text-gray-500 mb-2 uppercase tracking-wide">Answer Breakdown</p>
+                    <p className="text-sm text-gray-500 mt-auto pt-4">{totalQuestions} total questions</p>
                 </ResultCard>
             </div>
+            
+            {/* Incorrect Answers Review Section */}
+            {incorrectAnswers.length > 0 && (
+                <div className="mb-10 text-left">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        Review Incorrect Answers
+                        <span className="bg-red-100 text-red-600 text-sm px-2 py-1 rounded-full">{incorrectAnswers.length}</span>
+                    </h2>
+                    <div className="space-y-6">
+                        {incorrectAnswers.map((ans, idx) => (
+                            <div key={idx} className="bg-white border-l-4 border-red-500 shadow-sm rounded-r-lg p-6 border border-gray-200">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-3">{ans.questionText}</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                                    <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                                        <p className="text-xs text-red-500 font-bold uppercase mb-1">Your Answer</p>
+                                        <p className="text-red-700 font-medium">{ans.selectedAnswer}</p>
+                                    </div>
+                                    <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                                        <p className="text-xs text-green-500 font-bold uppercase mb-1">Correct Answer</p>
+                                        <p className="text-green-700 font-medium">{ans.correctAnswer}</p>
+                                    </div>
+                                </div>
+                                {ans.explanation && (
+                                    <div className="text-sm text-gray-600 mt-2 bg-gray-50 p-3 rounded-lg">
+                                        <span className="font-semibold text-gray-700 block mb-1">Explanation:</span>
+                                        {ans.explanation}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <button
                 onClick={onViewProgress}

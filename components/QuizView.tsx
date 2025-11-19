@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { Module, Question, QuizResult, UserAnswer } from '../types';
 import Icon from './Icon';
@@ -101,9 +102,11 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
 
     setUserAnswers(prev => [...prev, {
       questionId: currentQuestion.id,
+      questionText: currentQuestion.question,
       selectedAnswer: selectedAnswer,
       correctAnswer: currentQuestion.correctAnswer,
-      isCorrect: isCorrect
+      isCorrect: isCorrect,
+      explanation: currentQuestion.explanation
     }]);
 
     if (currentQuestion.explanation && currentQuestion.explanation.trim() !== '') {
@@ -121,9 +124,11 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
             const currentQuestion = questions[currentQuestionIndex];
             finalAnswers.push({
                 questionId: currentQuestion.id,
+                questionText: currentQuestion.question,
                 selectedAnswer: selectedAnswer,
                 correctAnswer: currentQuestion.correctAnswer,
-                isCorrect: selectedAnswer === currentQuestion.correctAnswer
+                isCorrect: selectedAnswer === currentQuestion.correctAnswer,
+                explanation: currentQuestion.explanation
             });
       }
 
