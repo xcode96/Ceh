@@ -9,7 +9,8 @@ import Footer from './components/Footer';
 import QuizCustomizationModal from './components/QuizCustomizationModal';
 import ProgressView from './components/ProgressView';
 import { INITIAL_EXAM_DATA } from './constants';
-import type { Module, QuestionBank, Question, Exam, SubTopic, QuizResult, QuizAttempt } from './types';
+import { generateQuestionsForModule } from './services/geminiService';
+import type { Module, QuestionBank, Question, Exam, SubTopic, QuizResult, QuizAttempt, DifficultyLevel } from './types';
 
 type View = 'dashboard' | 'quiz' | 'results' | 'progress' | 'home';
 
@@ -332,6 +333,31 @@ const App: React.FC = () => {
       updateQuestionBank(newBank);
   };
 
+  const handleGenerateAIQuestions = async (count: number, difficulty: DifficultyLevel): Promise<Question[]> => {
+      if (!activeModule || !activeSubTopic) return [];
+      try {
+        const generatedQuestions = await generateQuestionsForModule(
+            activeModule.title, 
+            activeModule.subTopics, 
+            activeSubTopic, 
+            activeContentPoint, 
+            count,
+            difficulty
+        );
+        
+        // Assign unique IDs to generated questions
+        const questionsWithIds: Question[] = generatedQuestions.map(q => ({
+            ...q,
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+        }));
+        
+        return questionsWithIds;
+      } catch (error) {
+        console.error("Error generating questions:", error);
+        throw error;
+      }
+  };
+
     const handleAddModule = useCallback((title: string) => {
         if (!title || title.trim() === '' || !activeExamId) return;
 
@@ -634,6 +660,7 @@ const App: React.FC = () => {
         initialQuestions={questionBank[activeModule.id]?.[topicIdentifier] || []}
         onSave={handleSaveQuestions}
         onClose={handleReturnToDashboard}
+        onGenerateAI={handleGenerateAIQuestions}
       />
     }
 

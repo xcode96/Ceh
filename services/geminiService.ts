@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, GenerateContentResponse } from '@google/genai';
-import type { Question, SubTopic } from '../types';
+import type { Question, SubTopic, DifficultyLevel } from '../types';
 
 const fetchWithTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
   return new Promise((resolve, reject) => {
@@ -21,31 +21,42 @@ const fetchWithTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
 }
 
 
-export const generateQuestionsForModule = async (moduleTitle: string, subTopics: SubTopic[], specificSubTopic?: string | null, contentPoint?: string | null): Promise<Omit<Question, 'id'>[]> => {
+export const generateQuestionsForModule = async (
+    moduleTitle: string, 
+    subTopics: SubTopic[], 
+    specificSubTopic?: string | null, 
+    contentPoint?: string | null, 
+    count: number = 5,
+    difficulty: DifficultyLevel = 'Medium'
+): Promise<Omit<Question, 'id'>[]> => {
   if (!process.env.API_KEY) {
     console.error("API_KEY environment variable not set.");
     const topic = contentPoint || specificSubTopic || moduleTitle;
     // Return mock data if API key is not available
     return Promise.resolve([
         {
-            question: `What is the primary purpose of Multi-Factor Authentication (MFA) in the context of ${topic}?`,
+            question: `[Mock ${difficulty}] What is the primary purpose of Multi-Factor Authentication (MFA) in the context of ${topic}?`,
             options: [
                 "To make passwords longer",
                 "To add an extra layer of security beyond just a password",
                 "To share your account with a colleague safely",
                 "To automatically change your password every month"
             ],
-            correctAnswer: "To add an extra layer of security beyond just a password"
+            correctAnswer: "To add an extra layer of security beyond just a password",
+            explanation: "MFA requires users to provide two or more verification factors to gain access to a resource, significantly increasing security over passwords alone.",
+            difficulty: difficulty
         },
         {
-            question: `Which of these is the strongest password, based on the principles of ${topic}?`,
+            question: `[Mock ${difficulty}] Which of these is the strongest password, based on the principles of ${topic}?`,
             options: [
                 "Password123",
                 "MyDogFido!2024",
                 "!@#$%",
                 "th1s-Is-a-V3ry-L0ng-&-C0mpl3x-P@ssphr@se!"
             ],
-            correctAnswer: "th1s-Is-a-V3ry-L0ng-&-C0mpl3x-P@ssphr@se!"
+            correctAnswer: "th1s-Is-a-V3ry-L0ng-&-C0mpl3x-P@ssphr@se!",
+            explanation: "Length and complexity are key factors in password strength. The correct option is a long passphrase with mixed characters, making it much harder to crack.",
+            difficulty: difficulty
         }
     ]);
   }
@@ -53,12 +64,31 @@ export const generateQuestionsForModule = async (moduleTitle: string, subTopics:
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
+    let difficultyInstruction = "";
+    switch (difficulty) {
+        case 'Low':
+            difficultyInstruction = "The questions should be Introductory/Easy. Focus on basic definitions, recognizing terms, and fundamental concepts. Avoid complex scenarios.";
+            break;
+        case 'Medium':
+            difficultyInstruction = "The questions should be Intermediate. Focus on application of concepts, understanding 'how' and 'why', and distinguishing between similar terms.";
+            break;
+        case 'Advanced':
+            difficultyInstruction = "The questions should be Advanced/Expert. Focus on complex scenarios, analyzing logs/outputs, strategic decision making, and deep technical details.";
+            break;
+        default:
+            difficultyInstruction = "The questions should be of intermediate difficulty.";
+    }
+
     const prompt = contentPoint && specificSubTopic
       ? `
-        Generate 5 highly specific multiple-choice quiz questions for the cybersecurity topic: "${contentPoint}".
+        Generate ${count} highly specific multiple-choice quiz questions for the cybersecurity topic: "${contentPoint}".
         This topic is part of the sub-topic "${specificSubTopic}" within the training module "${moduleTitle}".
+        ${difficultyInstruction}
         Ensure the questions are laser-focused on "${contentPoint}".
-        For each question, provide 4 options and clearly indicate the single correct answer.
+        For each question:
+        1. Provide 4 options.
+        2. Clearly indicate the single correct answer.
+        3. Provide a **detailed explanation** (2-3 sentences) of why the answer is correct and/or why the others are incorrect.
         Return the result as a JSON array.
       `
       : specificSubTopic
@@ -68,18 +98,26 @@ export const generateQuestionsForModule = async (moduleTitle: string, subTopics:
             ? `The questions should cover these specific points: ${subTopicData.content.join(', ')}.`
             : '';
           return `
-            Generate 10 multiple-choice quiz questions for the specific cybersecurity sub-topic: "${specificSubTopic}".
+            Generate ${count} multiple-choice quiz questions for the specific cybersecurity sub-topic: "${specificSubTopic}".
             This sub-topic is part of the broader training module titled "${moduleTitle}".
+            ${difficultyInstruction}
             Ensure the questions are highly relevant to the sub-topic.
             ${contentPoints}
-            For each question, provide 4 options and clearly indicate the single correct answer.
+            For each question:
+            1. Provide 4 options.
+            2. Clearly indicate the single correct answer.
+            3. Provide a **detailed explanation** (2-3 sentences) of why the answer is correct and/or why the others are incorrect.
             Return the result as a JSON array.
           `;
         })()
       : `
-        Generate ${subTopics.length} multiple-choice quiz questions for a cybersecurity training module titled "${moduleTitle}".
+        Generate ${count} multiple-choice quiz questions for a cybersecurity training module titled "${moduleTitle}".
         The questions should provide a broad overview, with one question dedicated to each of the following sub-topics: ${subTopics.map(st => st.title).join(', ')}.
-        For each question, provide 4 options and clearly indicate the single correct answer.
+        ${difficultyInstruction}
+        For each question:
+        1. Provide 4 options.
+        2. Clearly indicate the single correct answer.
+        3. Provide a **detailed explanation** (2-3 sentences) of why the answer is correct and/or why the others are incorrect.
         Return the result as a JSON array.
       `;
 
@@ -99,14 +137,16 @@ export const generateQuestionsForModule = async (moduleTitle: string, subTopics:
                 items: { type: Type.STRING },
               },
               correctAnswer: { type: Type.STRING },
+              explanation: { type: Type.STRING },
             },
-            required: ['question', 'options', 'correctAnswer'],
+            required: ['question', 'options', 'correctAnswer', 'explanation'],
           },
         },
       },
     });
 
-    const response: GenerateContentResponse = await fetchWithTimeout(responsePromise, 8000);
+    // Increased timeout to 120 seconds to accommodate larger batches (up to 20 questions) with detailed explanations
+    const response: GenerateContentResponse = await fetchWithTimeout(responsePromise, 120000); 
     const jsonText = response.text.trim();
     const questions: Omit<Question, 'id'>[] = JSON.parse(jsonText);
     
@@ -114,7 +154,8 @@ export const generateQuestionsForModule = async (moduleTitle: string, subTopics:
         throw new Error("Invalid format received from API");
     }
 
-    return questions;
+    // Inject the difficulty level into the returned objects for reference
+    return questions.map(q => ({ ...q, difficulty }));
 
   } catch (error) {
     console.error('Error generating questions with Gemini:', error);
@@ -131,7 +172,7 @@ export const generateQuestionSuggestions = async (moduleTitle: string, subTopic:
     const prompt = `
         Generate 3 distinct multiple-choice quiz questions for the cybersecurity sub-topic: "${subTopic}", which is part of the module "${moduleTitle}".
         These questions are suggestions for an admin creating a quiz. They should be clear, relevant, and challenging.
-        For each question, provide 4 options and the correct answer.
+        For each question, provide 4 options, the correct answer, and a brief explanation.
         Return the result as a JSON array.
       `;
     
@@ -151,14 +192,15 @@ export const generateQuestionSuggestions = async (moduleTitle: string, subTopic:
                 items: { type: Type.STRING },
               },
               correctAnswer: { type: Type.STRING },
+              explanation: { type: Type.STRING },
             },
-            required: ['question', 'options', 'correctAnswer'],
+            required: ['question', 'options', 'correctAnswer', 'explanation'],
           },
         },
       },
     });
 
-    const response: GenerateContentResponse = await fetchWithTimeout(responsePromise, 8000);
+    const response: GenerateContentResponse = await fetchWithTimeout(responsePromise, 30000);
     const jsonText = response.text.trim();
     return JSON.parse(jsonText);
   } catch(error) {
@@ -204,7 +246,7 @@ export const generateExplanationForQuestion = async (question: string, options: 
             contents: prompt,
         });
 
-        const response: GenerateContentResponse = await fetchWithTimeout(responsePromise, 8000);
+        const response: GenerateContentResponse = await fetchWithTimeout(responsePromise, 20000);
         return response.text;
 
     } catch (error) {
@@ -276,7 +318,7 @@ export const generateExplanationForAnswer = async (question: string, correctAnsw
             contents: prompt,
         });
 
-        const response: GenerateContentResponse = await fetchWithTimeout(responsePromise, 8000);
+        const response: GenerateContentResponse = await fetchWithTimeout(responsePromise, 20000);
         return response.text;
 
     } catch (error) {
@@ -316,7 +358,7 @@ export const generateTagsForQuestion = async (question: string, topic: string): 
             }
         });
 
-        const response: GenerateContentResponse = await fetchWithTimeout(responsePromise, 5000);
+        const response: GenerateContentResponse = await fetchWithTimeout(responsePromise, 15000);
         const jsonText = response.text.trim();
         const tags: string[] = JSON.parse(jsonText);
         

@@ -19,12 +19,15 @@ export interface Exam {
   modules: Module[];
 }
 
+export type DifficultyLevel = 'Low' | 'Medium' | 'Advanced';
+
 export interface Question {
   id: string; // Unique identifier for each question
   question: string;
   options: string[];
   correctAnswer: string;
   explanation?: string;
+  difficulty?: DifficultyLevel;
 }
 
 export type QuestionBank = {

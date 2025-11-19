@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { Module, Question, QuizResult, UserAnswer } from '../types';
 import Icon from './Icon';
@@ -57,6 +58,27 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
       setIsAnswerRevealed(true);
   };
 
+  const handlePreviousQuestion = () => {
+      if (currentQuestionIndex > 0) {
+          const newIndex = currentQuestionIndex - 1;
+          const prevQuestion = questions[newIndex];
+          
+          // Restore state for previous question
+          const existingAnswer = userAnswers.find(a => a.questionId === prevQuestion.id);
+          
+          setCurrentQuestionIndex(newIndex);
+          setSelectedAnswer(existingAnswer?.selectedAnswer || null);
+          
+          // In study mode, if they answered it, it's likely revealed
+          // Or we can reset it. Let's assume if they answered, we show the state.
+          if (mode === 'study' && existingAnswer) {
+              setIsAnswerRevealed(true);
+          } else {
+              setIsAnswerRevealed(false);
+          }
+      }
+  };
+
   const handleNextQuestion = () => {
     if (!selectedAnswer) return;
 
@@ -72,13 +94,33 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
         explanation: currentQuestion.explanation
     };
 
-    const updatedAnswers = [...userAnswers, newAnswer];
+    // Update existing answer or add new one
+    let updatedAnswers = [...userAnswers];
+    const existingIndex = updatedAnswers.findIndex(a => a.questionId === currentQuestion.id);
+    
+    if (existingIndex >= 0) {
+        updatedAnswers[existingIndex] = newAnswer;
+    } else {
+        updatedAnswers.push(newAnswer);
+    }
+    
+    setUserAnswers(updatedAnswers);
 
     if (currentQuestionIndex < questions.length - 1) {
-      setUserAnswers(updatedAnswers);
-      setCurrentQuestionIndex(prev => prev + 1);
-      setSelectedAnswer(null);
-      setIsAnswerRevealed(false);
+      const nextIndex = currentQuestionIndex + 1;
+      const nextQuestion = questions[nextIndex];
+      
+      // Check if next question was already answered (if we went back then forward)
+      const nextExistingAnswer = updatedAnswers.find(a => a.questionId === nextQuestion.id);
+
+      setCurrentQuestionIndex(nextIndex);
+      setSelectedAnswer(nextExistingAnswer?.selectedAnswer || null);
+      
+      if (mode === 'study' && nextExistingAnswer) {
+          setIsAnswerRevealed(true);
+      } else {
+          setIsAnswerRevealed(false);
+      }
     } else {
       finishQuiz(updatedAnswers);
     }
@@ -172,20 +214,30 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
           </div>
       )}
 
-      <div className="mt-8">
+      <div className="mt-8 flex gap-3">
+          {currentQuestionIndex > 0 && (
+             <button
+                onClick={handlePreviousQuestion}
+                className="w-1/3 py-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center gap-2"
+             >
+                <Icon iconName="chevron-down" className="h-4 w-4 rotate-90" />
+                <span>Previous</span>
+             </button>
+          )}
+          
           {mode === 'study' ? (
               !isAnswerRevealed ? (
                   <button
                     onClick={handleRevealAnswer}
                     disabled={!selectedAnswer}
-                    className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md"
+                    className="flex-1 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md"
                   >
                     Reveal Answer
                   </button>
               ) : (
                   <button
                     onClick={handleNextQuestion}
-                    className="w-full py-3 bg-gray-900 text-white font-semibold rounded-lg hover:bg-gray-800 transition-colors shadow-md flex items-center justify-center gap-2"
+                    className="flex-1 py-3 bg-gray-900 text-white font-semibold rounded-lg hover:bg-gray-800 transition-colors shadow-md flex items-center justify-center gap-2"
                   >
                     <span>{isLastQuestion ? 'Finish Exam' : 'Next Question'}</span>
                     {!isLastQuestion && <Icon iconName="chevron-down" className="h-4 w-4 rotate-270" />}
@@ -195,7 +247,7 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
               <button
                 onClick={handleNextQuestion}
                 disabled={!selectedAnswer}
-                className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-md flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="flex-1 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-md flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 <span>{isLastQuestion ? 'Finish Exam' : 'Next Question'}</span>
                 {!isLastQuestion && <Icon iconName="chevron-down" className="h-4 w-4 rotate-270" />}

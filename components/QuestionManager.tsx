@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Module, Question } from '../types';
+import type { Module, Question, DifficultyLevel } from '../types';
 import QuestionForm from './QuestionForm';
 import Icon from './Icon';
 
@@ -10,12 +10,16 @@ interface QuestionManagerProps {
   initialQuestions: Question[];
   onSave: (questions: Question[]) => void;
   onClose: () => void;
+  onGenerateAI: (count: number, difficulty: DifficultyLevel) => Promise<Question[]>;
 }
 
-const QuestionManager: React.FC<QuestionManagerProps> = ({ module, subTopic, contentPoint, initialQuestions, onSave, onClose }) => {
+const QuestionManager: React.FC<QuestionManagerProps> = ({ module, subTopic, contentPoint, initialQuestions, onSave, onClose, onGenerateAI }) => {
   const [questions, setQuestions] = useState<Question[]>(initialQuestions);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [aiGenCount, setAiGenCount] = useState(5);
+  const [aiDifficulty, setAiDifficulty] = useState<DifficultyLevel>('Medium');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const handleAddOrUpdateQuestion = (question: Question) => {
     let updatedQuestions;
@@ -41,6 +45,23 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ module, subTopic, con
     onSave(questions);
     onClose();
   };
+  
+  const handleAiGenerate = async () => {
+      if (aiGenCount < 1 || aiGenCount > 20) {
+          alert("Please enter a number between 1 and 20.");
+          return;
+      }
+      setIsGenerating(true);
+      try {
+          const newQuestions = await onGenerateAI(aiGenCount, aiDifficulty);
+          setQuestions(prev => [...prev, ...newQuestions]);
+          alert(`Successfully generated ${newQuestions.length} ${aiDifficulty} questions! Don't forget to click 'Save & Close'.`);
+      } catch (error) {
+          alert("Failed to generate questions. Please check your API key or try again later.");
+      } finally {
+          setIsGenerating(false);
+      }
+  };
 
   const renderContent = () => {
     if (isAdding || editingQuestion) {
@@ -52,18 +73,86 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ module, subTopic, con
     }
     return (
       <>
-        {questions.map((q, index) => (
-          <div key={q.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
-            <p className="text-gray-700 flex-1">{index + 1}. {q.question}</p>
-            <div className="flex gap-2">
-              <button onClick={() => setEditingQuestion(q)} className="px-3 py-1 text-sm font-semibold text-blue-700 bg-blue-100 rounded-full hover:bg-blue-200">Edit</button>
-              <button onClick={() => handleDeleteQuestion(q.id)} className="px-3 py-1 text-sm font-semibold text-red-700 bg-red-100 rounded-full hover:bg-red-200">Delete</button>
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100 mb-6">
+            <h3 className="text-lg font-bold text-indigo-900 mb-2 flex items-center gap-2">
+                <Icon iconName="sparkles" className="h-5 w-5 text-indigo-600" />
+                AI Question Generator
+            </h3>
+            <p className="text-sm text-indigo-700 mb-4">Automatically generate unique, high-quality questions for this topic using AI.</p>
+            <div className="flex flex-col sm:flex-row items-end gap-4">
+                <div className="flex-1 max-w-xs w-full">
+                    <label className="block text-xs font-bold text-indigo-800 uppercase tracking-wider mb-1">How many?</label>
+                    <input 
+                        type="number" 
+                        min="1" 
+                        max="20" 
+                        value={aiGenCount}
+                        onChange={(e) => setAiGenCount(parseInt(e.target.value) || 0)}
+                        className="w-full px-4 py-2 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    />
+                </div>
+                <div className="flex-1 max-w-xs w-full">
+                    <label className="block text-xs font-bold text-indigo-800 uppercase tracking-wider mb-1">Difficulty</label>
+                    <select
+                        value={aiDifficulty}
+                        onChange={(e) => setAiDifficulty(e.target.value as DifficultyLevel)}
+                        className="w-full px-4 py-2 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                    >
+                        <option value="Low">Low (Easy)</option>
+                        <option value="Medium">Medium (Intermediate)</option>
+                        <option value="Advanced">Advanced (Hard)</option>
+                    </select>
+                </div>
+                <button 
+                    onClick={handleAiGenerate}
+                    disabled={isGenerating}
+                    className="w-full sm:w-auto px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-indigo-300 flex items-center justify-center gap-2"
+                >
+                    {isGenerating ? (
+                        <>
+                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Generating...
+                        </>
+                    ) : (
+                        <>
+                            <Icon iconName="sparkles" className="h-5 w-5" />
+                            Generate
+                        </>
+                    )}
+                </button>
             </div>
-          </div>
-        ))}
-        {questions.length === 0 && <p className="text-center text-gray-500 py-4">No questions defined for this sub-topic yet.</p>}
-        <button onClick={() => setIsAdding(true)} className="w-full mt-4 py-2 border-2 border-dashed border-gray-300 text-gray-600 font-semibold rounded-lg hover:bg-gray-100">
-          + Add New Question
+        </div>
+
+        <div className="space-y-3">
+            {questions.map((q, index) => (
+            <div key={q.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center border border-gray-200">
+                <div className="flex-1 pr-4">
+                    <p className="text-gray-700"><span className="font-bold text-gray-500 mr-2">{index + 1}.</span> {q.question}</p>
+                    {q.difficulty && (
+                         <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${
+                             q.difficulty === 'Advanced' ? 'bg-red-100 text-red-700' : 
+                             q.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 
+                             'bg-green-100 text-green-800'
+                         }`}>
+                             {q.difficulty}
+                         </span>
+                    )}
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                <button onClick={() => setEditingQuestion(q)} className="px-3 py-1 text-sm font-semibold text-blue-700 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors">Edit</button>
+                <button onClick={() => handleDeleteQuestion(q.id)} className="px-3 py-1 text-sm font-semibold text-red-700 bg-red-100 rounded-full hover:bg-red-200 transition-colors">Delete</button>
+                </div>
+            </div>
+            ))}
+        </div>
+        
+        {questions.length === 0 && <p className="text-center text-gray-500 py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">No questions defined for this sub-topic yet. Use the AI Generator above or add one manually.</p>}
+        
+        <button onClick={() => setIsAdding(true)} className="w-full mt-6 py-3 border-2 border-dashed border-gray-300 text-gray-600 font-semibold rounded-lg hover:bg-gray-50 hover:text-indigo-600 hover:border-indigo-300 transition-all">
+          + Add New Question Manually
         </button>
       </>
     );
@@ -71,16 +160,16 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ module, subTopic, con
 
   return (
     <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden" style={{ minHeight: '90vh' }}>
-      <header className="p-6 border-b border-gray-200">
+      <header className="p-6 border-b border-gray-200 bg-gray-50">
         <h1 className="text-2xl font-bold text-gray-800">Manage Questions</h1>
         <p className="text-gray-500">{module.title}: <span className="font-semibold text-gray-700">{contentPoint ? `${subTopic} > ${contentPoint}` : subTopic}</span></p>
       </header>
-      <main className="flex-1 p-6 space-y-4 overflow-y-auto">
+      <main className="flex-1 p-6 overflow-y-auto">
         {renderContent()}
       </main>
-      <footer className="p-6 border-t border-gray-200 flex justify-end gap-4">
-        <button onClick={onClose} className="px-6 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200">Close</button>
-        <button onClick={handleSaveChanges} className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700">Save & Close</button>
+      <footer className="p-6 border-t border-gray-200 flex justify-end gap-4 bg-gray-50">
+        <button onClick={onClose} className="px-6 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+        <button onClick={handleSaveChanges} className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-md">Save & Close</button>
       </footer>
     </div>
   );
