@@ -5,7 +5,7 @@ interface QuizCustomizationModalProps {
   onClose: () => void;
   topicTitle: string;
   maxQuestions: number;
-  onStart: (numberOfQuestions: number) => void;
+  onStart: (numberOfQuestions: number, mode: 'study' | 'exam') => void;
 }
 
 const QuizCustomizationModal: React.FC<QuizCustomizationModalProps> = ({
@@ -16,11 +16,13 @@ const QuizCustomizationModal: React.FC<QuizCustomizationModalProps> = ({
   onStart,
 }) => {
   const [numQuestions, setNumQuestions] = useState(maxQuestions);
+  const [mode, setMode] = useState<'study' | 'exam'>('study');
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setNumQuestions(maxQuestions);
+      setMode('study');
       setError('');
     }
   }, [isOpen, maxQuestions]);
@@ -45,7 +47,7 @@ const QuizCustomizationModal: React.FC<QuizCustomizationModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!error && numQuestions > 0) {
-      onStart(numQuestions);
+      onStart(numQuestions, mode);
     }
   };
   
@@ -63,7 +65,7 @@ const QuizCustomizationModal: React.FC<QuizCustomizationModalProps> = ({
         <p className="text-center text-gray-500 mb-6">Topic: <span className="font-semibold text-gray-700">{topicTitle}</span></p>
         
         <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
               <label htmlFor="numQuestions" className="block text-sm font-medium text-gray-700">
                 Number of Questions
@@ -83,7 +85,39 @@ const QuizCustomizationModal: React.FC<QuizCustomizationModalProps> = ({
               />
               {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
             </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Quiz Mode</label>
+                <div className="grid grid-cols-2 gap-4">
+                    <label className={`border rounded-lg p-3 flex flex-col items-center cursor-pointer transition-all ${mode === 'study' ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500' : 'border-gray-200 hover:bg-gray-50'}`}>
+                        <input 
+                            type="radio" 
+                            name="quizMode" 
+                            value="study" 
+                            checked={mode === 'study'} 
+                            onChange={() => setMode('study')}
+                            className="hidden"
+                        />
+                        <span className="font-bold text-gray-800 mb-1">Study Mode</span>
+                        <span className="text-xs text-center text-gray-500">Reveal answers after each question</span>
+                    </label>
+
+                    <label className={`border rounded-lg p-3 flex flex-col items-center cursor-pointer transition-all ${mode === 'exam' ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500' : 'border-gray-200 hover:bg-gray-50'}`}>
+                        <input 
+                            type="radio" 
+                            name="quizMode" 
+                            value="exam" 
+                            checked={mode === 'exam'} 
+                            onChange={() => setMode('exam')}
+                            className="hidden"
+                        />
+                        <span className="font-bold text-gray-800 mb-1">Exam Mode</span>
+                        <span className="text-xs text-center text-gray-500">See results only at the end</span>
+                    </label>
+                </div>
+            </div>
           </div>
+
           <div className="flex gap-3 mt-8">
             <button type="button" onClick={onClose} className="w-full py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors">
               Cancel

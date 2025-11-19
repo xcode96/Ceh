@@ -20,6 +20,7 @@ const App: React.FC = () => {
   const [activeSubTopic, setActiveSubTopic] = useState<string | null>(null);
   const [activeContentPoint, setActiveContentPoint] = useState<string | null>(null);
   const [activeQuizQuestions, setActiveQuizQuestions] = useState<Question[]>([]);
+  const [activeQuizMode, setActiveQuizMode] = useState<'study' | 'exam'>('study');
   
   // Quiz Results & History
   const [lastQuizResult, setLastQuizResult] = useState<QuizResult | null>(null);
@@ -209,7 +210,7 @@ const App: React.FC = () => {
     }
   }, [questionBank]);
 
-  const handleStartQuiz = useCallback((numberOfQuestions: number) => {
+  const handleStartQuiz = useCallback((numberOfQuestions: number, mode: 'study' | 'exam' = 'study') => {
     if (!quizSettings.module || !quizSettings.subTopic) return;
     
     const { module, subTopic, contentPoint } = quizSettings;
@@ -224,6 +225,7 @@ const App: React.FC = () => {
     setActiveSubTopic(subTopic);
     setActiveContentPoint(contentPoint);
     setActiveQuizQuestions(selectedQuestions);
+    setActiveQuizMode(mode);
     setCurrentView('quiz');
     setQuizSettings({ isOpen: false, module: null, subTopic: null, contentPoint: null, availableQuestions: 0 });
   }, [questionBank, quizSettings]);
@@ -642,6 +644,7 @@ const App: React.FC = () => {
           subTopic={activeSubTopic} 
           contentPoint={activeContentPoint} 
           questions={activeQuizQuestions}
+          mode={activeQuizMode}
           onCompleteQuiz={handleCompleteQuiz} 
         />;
       case 'results':

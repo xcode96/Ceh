@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { Module, Question, QuizResult, UserAnswer } from '../types';
 import Icon from './Icon';
@@ -8,77 +7,14 @@ interface QuizViewProps {
   subTopic?: string | null;
   contentPoint?: string | null;
   questions: Question[];
+  mode: 'study' | 'exam';
   onCompleteQuiz: (result: QuizResult) => void;
 }
 
-const MarkdownRenderer: React.FC<{ text: string | null }> = ({ text }) => {
-  if (!text) {
-    return null;
-  }
-
-  const elements = text.split('\n').map((line, index) => {
-    if (line.startsWith('* ') || line.startsWith('- ')) {
-      const content = line.substring(2);
-      const parts = content.split(/(\*\*.*?\*\*)/g);
-      return (
-        <li key={index} className="ml-5 list-disc">
-          {parts.map((part, i) =>
-            part.startsWith('**') && part.endsWith('**') ? (
-              <strong key={i}>{part.slice(2, -2)}</strong>
-            ) : (
-              part
-            )
-          )}
-        </li>
-      );
-    }
-    if (line.match(/^(🔐|💡|✅|❌)\s/)) {
-        return <p key={index} className="font-semibold text-gray-800 flex items-center gap-2">{line}</p>;
-    }
-    if (line.trim() === '') {
-      return null;
-    }
-    const parts = line.split(/(\*\*.*?\*\*)/g);
-    return (
-      <p key={index}>
-        {parts.map((part, i) =>
-          part.startsWith('**') && part.endsWith('**') ? (
-            <strong key={i}>{part.slice(2, -2)}</strong>
-          ) : (
-            part
-          )
-        )}
-      </p>
-    );
-  }).filter(Boolean);
-
-  const groupedElements: React.JSX.Element[] = [];
-  let currentList: React.JSX.Element[] = [];
-
-  elements.forEach((el, i) => {
-    if (el.type === 'li') {
-      currentList.push(el);
-    } else {
-      if (currentList.length > 0) {
-        groupedElements.push(<ul key={`ul-${i}`} className="space-y-1 mt-2">{currentList}</ul>);
-        currentList = [];
-      }
-      groupedElements.push(el as React.JSX.Element);
-    }
-  });
-
-  if (currentList.length > 0) {
-    groupedElements.push(<ul key="ul-last" className="space-y-1 mt-2">{currentList}</ul>);
-  }
-
-  return <div className="text-gray-600 text-sm space-y-2">{groupedElements}</div>;
-};
-
-const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, questions, onCompleteQuiz }) => {
+const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, questions, onCompleteQuiz, mode }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [answerChecked, setAnswerChecked] = useState<boolean>(false);
-  const [explanation, setExplanation] = useState<string | null>(null);
+  const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
   const [startTime, setStartTime] = useState<number>(0);
 
@@ -92,45 +28,9 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
     ? `${module.title}: ${subTopic}` 
     : module.title;
 
-
-  const handleCheckAnswer = () => {
-    if (!selectedAnswer) return;
-    setAnswerChecked(true);
-
-    const currentQuestion = questions[currentQuestionIndex];
-    const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
-
-    setUserAnswers(prev => [...prev, {
-      questionId: currentQuestion.id,
-      questionText: currentQuestion.question,
-      selectedAnswer: selectedAnswer,
-      correctAnswer: currentQuestion.correctAnswer,
-      isCorrect: isCorrect,
-      explanation: currentQuestion.explanation
-    }]);
-
-    if (currentQuestion.explanation && currentQuestion.explanation.trim() !== '') {
-      setExplanation(currentQuestion.explanation);
-    }
-  };
-
-  const finishQuiz = () => {
+  const finishQuiz = (finalAnswers: UserAnswer[]) => {
       const endTime = Date.now();
       const totalTime = Math.round((endTime - startTime) / 1000); // in seconds
-      const finalAnswers = [...userAnswers];
-      
-      // Handle the last question if it wasn't "checked"
-       if (selectedAnswer && !answerChecked) {
-            const currentQuestion = questions[currentQuestionIndex];
-            finalAnswers.push({
-                questionId: currentQuestion.id,
-                questionText: currentQuestion.question,
-                selectedAnswer: selectedAnswer,
-                correctAnswer: currentQuestion.correctAnswer,
-                isCorrect: selectedAnswer === currentQuestion.correctAnswer,
-                explanation: currentQuestion.explanation
-            });
-      }
 
       const correctCount = finalAnswers.filter(a => a.isCorrect).length;
       const totalQuestions = questions.length;
@@ -147,14 +47,40 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
       onCompleteQuiz(result);
   };
 
+  const handleOptionClick = (option: string) => {
+      if (mode === 'study' && isAnswerRevealed) return;
+      setSelectedAnswer(option);
+  };
+
+  const handleRevealAnswer = () => {
+      if (!selectedAnswer) return;
+      setIsAnswerRevealed(true);
+  };
+
   const handleNextQuestion = () => {
+    if (!selectedAnswer) return;
+
+    const currentQuestion = questions[currentQuestionIndex];
+    const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+
+    const newAnswer: UserAnswer = {
+        questionId: currentQuestion.id,
+        questionText: currentQuestion.question,
+        selectedAnswer: selectedAnswer,
+        correctAnswer: currentQuestion.correctAnswer,
+        isCorrect: isCorrect,
+        explanation: currentQuestion.explanation
+    };
+
+    const updatedAnswers = [...userAnswers, newAnswer];
+
     if (currentQuestionIndex < questions.length - 1) {
+      setUserAnswers(updatedAnswers);
       setCurrentQuestionIndex(prev => prev + 1);
       setSelectedAnswer(null);
-      setAnswerChecked(false);
-      setExplanation(null);
+      setIsAnswerRevealed(false);
     } else {
-      finishQuiz();
+      finishQuiz(updatedAnswers);
     }
   };
   
@@ -172,30 +98,39 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
   }
 
   const currentQuestion = questions[currentQuestionIndex];
-  const progressPercentage = ((currentQuestionIndex + 1) / questions.length) * 100;
-  
+  const progressPercentage = ((currentQuestionIndex) / questions.length) * 100;
+  const isLastQuestion = currentQuestionIndex === questions.length - 1;
+
   const getOptionClassName = (option: string) => {
-    if (!answerChecked) {
-      return selectedAnswer === option
-        ? 'bg-indigo-100 border-indigo-500 shadow-md'
-        : 'bg-white border-gray-200 hover:border-indigo-300 hover:bg-indigo-50';
+    if (mode === 'exam') {
+        if (selectedAnswer === option) {
+            return 'bg-indigo-100 border-indigo-500 shadow-md ring-1 ring-indigo-500 text-indigo-900';
+        }
+        return 'bg-white border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700';
     }
 
-    if (option === currentQuestion.correctAnswer) {
-      return 'bg-green-100 border-green-500';
+    if (!isAnswerRevealed) {
+        if (selectedAnswer === option) {
+            return 'bg-indigo-100 border-indigo-500 shadow-md ring-1 ring-indigo-500 text-indigo-900';
+        }
+        return 'bg-white border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700';
+    } else {
+        // Reveal state for Study Mode
+        if (option === currentQuestion.correctAnswer) {
+            return 'bg-green-100 border-green-500 text-green-900 ring-1 ring-green-500';
+        }
+        if (selectedAnswer === option && option !== currentQuestion.correctAnswer) {
+            return 'bg-red-100 border-red-500 text-red-900 ring-1 ring-red-500';
+        }
+        return 'bg-gray-50 border-gray-200 text-gray-400 opacity-60';
     }
-    
-    if (option === selectedAnswer) {
-      return 'bg-red-100 border-red-500';
-    }
-
-    return 'bg-gray-100 border-gray-200 text-gray-500';
   };
 
   return (
-    <div className="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-xl">
+    <div className="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
       <div className="text-center mb-6">
         <h2 className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">{quizTitle}</h2>
+        {mode === 'exam' && <span className="text-xs font-bold text-gray-400 ml-2 border border-gray-300 px-1.5 py-0.5 rounded">EXAM MODE</span>}
         <div className="w-full bg-gray-200 rounded-full h-2 my-3">
             <div className="bg-gradient-to-r from-pink-500 to-purple-600 h-2 rounded-full" style={{ width: `${progressPercentage}%`, transition: 'width 0.3s' }}></div>
         </div>
@@ -208,43 +143,65 @@ const QuizView: React.FC<QuizViewProps> = ({ module, subTopic, contentPoint, que
         {currentQuestion.options.map((option, index) => (
           <button
             key={index}
-            onClick={() => setSelectedAnswer(option)}
-            disabled={answerChecked}
+            onClick={() => handleOptionClick(option)}
+            disabled={mode === 'study' && isAnswerRevealed}
             className={`w-full text-left p-4 rounded-lg border-2 transition-all duration-200 ${getOptionClassName(option)}`}
           >
-            {option}
+             <div className="flex items-center justify-between">
+                <span>{option}</span>
+                {mode === 'study' && isAnswerRevealed && option === currentQuestion.correctAnswer && (
+                    <Icon iconName="shield-check" className="h-5 w-5 text-green-600" />
+                )}
+                 {mode === 'study' && isAnswerRevealed && selectedAnswer === option && option !== currentQuestion.correctAnswer && (
+                    <Icon iconName="alert" className="h-5 w-5 text-red-600" />
+                )}
+             </div>
           </button>
         ))}
       </div>
-      
-      {answerChecked && explanation && (
-         <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-           <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
-             <Icon iconName={'book-open'} className={`h-5 w-5 text-green-500`} />
-             Explanation
-           </h4>
-            <MarkdownRenderer text={explanation} />
-         </div>
+
+      {mode === 'study' && isAnswerRevealed && currentQuestion.explanation && (
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100 text-sm text-blue-800">
+              <div className="flex items-start gap-2">
+                  <span className="text-lg">💡</span>
+                  <div>
+                      <span className="font-bold block mb-1">Explanation:</span>
+                      {currentQuestion.explanation}
+                  </div>
+              </div>
+          </div>
       )}
 
-      {!answerChecked ? (
-        <div className="flex flex-col sm:flex-row items-center gap-4 mt-8">
-          <button
-            onClick={handleCheckAnswer}
-            disabled={!selectedAnswer}
-            className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-          >
-            Check Answer
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={handleNextQuestion}
-          className="w-full mt-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          {currentQuestionIndex < questions.length - 1 ? 'Next Question' : 'Finish Quiz'}
-        </button>
-      )}
+      <div className="mt-8">
+          {mode === 'study' ? (
+              !isAnswerRevealed ? (
+                  <button
+                    onClick={handleRevealAnswer}
+                    disabled={!selectedAnswer}
+                    className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md"
+                  >
+                    Reveal Answer
+                  </button>
+              ) : (
+                  <button
+                    onClick={handleNextQuestion}
+                    className="w-full py-3 bg-gray-900 text-white font-semibold rounded-lg hover:bg-gray-800 transition-colors shadow-md flex items-center justify-center gap-2"
+                  >
+                    <span>{isLastQuestion ? 'Finish Exam' : 'Next Question'}</span>
+                    {!isLastQuestion && <Icon iconName="chevron-down" className="h-4 w-4 rotate-270" />}
+                  </button>
+              )
+          ) : (
+              <button
+                onClick={handleNextQuestion}
+                disabled={!selectedAnswer}
+                className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-md flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                <span>{isLastQuestion ? 'Finish Exam' : 'Next Question'}</span>
+                {!isLastQuestion && <Icon iconName="chevron-down" className="h-4 w-4 rotate-270" />}
+              </button>
+          )}
+      </div>
     </div>
   );
 };
