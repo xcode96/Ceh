@@ -6,7 +6,7 @@ import LoginView from './components/LoginView';
 import QuestionManager from './components/QuestionManager';
 import Home from './components/Home';
 import Footer from './components/Footer';
-import QuizCustomizationModal from './components/QuizCustomizationModal';
+import QuizCustomizationModal, { QuizStartConfig } from './components/QuizCustomizationModal';
 import ProgressView from './components/ProgressView';
 import { INITIAL_EXAM_DATA } from './constants';
 import { generateQuestionsForModule } from './services/geminiService';
@@ -211,22 +211,31 @@ const App: React.FC = () => {
     }
   }, [questionBank]);
 
-  const handleStartQuiz = useCallback((numberOfQuestions: number, mode: 'study' | 'exam' = 'study') => {
+  const handleStartQuiz = useCallback((config: QuizStartConfig) => {
     if (!quizSettings.module || !quizSettings.subTopic) return;
     
     const { module, subTopic, contentPoint } = quizSettings;
     const topicIdentifier = getTopicIdentifier(subTopic, contentPoint);
     const allQuestions = questionBank[module.id]?.[topicIdentifier] || [];
 
-    // Shuffle and slice
-    const shuffled = [...allQuestions].sort(() => 0.5 - Math.random());
-    const selectedQuestions = shuffled.slice(0, numberOfQuestions);
+    let selectedQuestions: Question[] = [];
+
+    if (config.shuffle) {
+        // Random selection (Custom Quiz)
+        const shuffled = [...allQuestions].sort(() => 0.5 - Math.random());
+        selectedQuestions = shuffled.slice(0, config.count);
+    } else {
+        // Sequential selection (Daily Challenge)
+        // Ensure startIndex is valid
+        const start = config.startIndex || 0;
+        selectedQuestions = allQuestions.slice(start, start + config.count);
+    }
 
     setActiveModule(module);
     setActiveSubTopic(subTopic);
     setActiveContentPoint(contentPoint);
     setActiveQuizQuestions(selectedQuestions);
-    setActiveQuizMode(mode);
+    setActiveQuizMode(config.mode);
     setCurrentView('quiz');
     setQuizSettings({ isOpen: false, module: null, subTopic: null, contentPoint: null, availableQuestions: 0 });
   }, [questionBank, quizSettings]);
