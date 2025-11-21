@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { Exam } from '../types';
 import Icon from './Icon';
@@ -9,6 +10,7 @@ interface HomeProps {
   onAddExam: (title: string, description: string) => void;
   onAdminLoginClick: () => void;
   onLogout: () => void;
+  onViewLearningHub: () => void;
 }
 
 const ExamCard: React.FC<{exam: Exam, onSelect: () => void}> = ({ exam, onSelect }) => (
@@ -23,7 +25,7 @@ const ExamCard: React.FC<{exam: Exam, onSelect: () => void}> = ({ exam, onSelect
 );
 
 
-const Home: React.FC<HomeProps> = ({ exams, onSelectExam, isAdmin, onAddExam, onAdminLoginClick, onLogout }) => {
+const Home: React.FC<HomeProps> = ({ exams, onSelectExam, isAdmin, onAddExam, onAdminLoginClick, onLogout, onViewLearningHub }) => {
     
     const handleAddExamClick = () => {
         const title = window.prompt("Enter the title for the new exam folder:");
@@ -42,9 +44,15 @@ const Home: React.FC<HomeProps> = ({ exams, onSelectExam, isAdmin, onAddExam, on
                     <h1 className="text-3xl font-bold text-gray-900">Cyber Security Training Platform</h1>
                     <p className="text-gray-600">Select an exam to begin your training.</p>
                 </div>
-                 <button onClick={isAdmin ? onLogout : onAdminLoginClick} className="py-2 px-4 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors duration-300">
-                    {isAdmin ? 'Logout' : 'Admin Login'}
-                </button>
+                <div className="flex items-center gap-3">
+                     <button onClick={onViewLearningHub} className="py-2 px-4 bg-indigo-50 text-indigo-700 font-semibold rounded-lg hover:bg-indigo-100 transition-colors duration-300 flex items-center gap-2">
+                        <Icon iconName="book-open" className="h-5 w-5"/>
+                        Learning Hub
+                    </button>
+                     <button onClick={isAdmin ? onLogout : onAdminLoginClick} className="py-2 px-4 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors duration-300">
+                        {isAdmin ? 'Logout' : 'Admin Login'}
+                    </button>
+                </div>
             </header>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {exams.map(exam => (

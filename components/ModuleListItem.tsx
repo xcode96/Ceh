@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useMemo } from 'react';
 import Icon from './Icon';
 import type { Module, QuestionBank, SubTopic, Question } from '../types';
@@ -19,6 +20,9 @@ interface ModuleListItemProps {
   onToggleContentPointVisibility: (subTopic: string, contentPoint: string) => void;
   onAddSubTopic: (subTopic: string) => void;
   onEditSubTopic: (oldSubTopic: string, newSubTopic: string) => void;
+  onGenerateAI?: () => void;
+  isGenerating?: boolean;
+  generatingStatus?: string;
 }
 
 interface ContentPointItemProps {
@@ -228,7 +232,7 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
     module, questionBank, onConfigure, isAdmin, onManage, onEdit, onExport, onImport, isVisible, 
     onToggleVisibility, subTopicVisibility, onToggleSubTopicVisibility, 
     contentPointVisibility, onToggleContentPointVisibility,
-    onAddSubTopic, onEditSubTopic
+    onAddSubTopic, onEditSubTopic, onGenerateAI, isGenerating, generatingStatus
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
@@ -290,6 +294,7 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
       >
         <div className="flex items-center gap-4">
           {isAdmin && (
+            <div className="flex items-center gap-1">
               <button
                   onClick={(e) => {
                       e.stopPropagation();
@@ -300,6 +305,28 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
               >
                   <Icon iconName={isVisible ? 'eye' : 'eye-slash'} className="h-5 w-5" />
               </button>
+              
+              {/* Bulk AI Generate Button */}
+              {onGenerateAI && (
+                  <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isGenerating) onGenerateAI();
+                    }}
+                    title="Bulk Generate Questions using AI for all sub-topics"
+                    className={`p-2 rounded-full hover:bg-indigo-50 ${isGenerating ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'}`}
+                  >
+                     {isGenerating ? (
+                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                     ) : (
+                         <Icon iconName="sparkles" className="h-5 w-5" />
+                     )}
+                  </button>
+              )}
+            </div>
           )}
           <div className={`p-3 rounded-lg ${module.color}`}>
             <Icon iconName={module.icon} />
@@ -317,7 +344,19 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
                 </button>
               )}
             </div>
-            <p className="text-sm text-gray-600">{module.subTopics.length} sub-topics</p>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm text-gray-600">
+                 <span>{module.subTopics.length} sub-topics</span>
+                 {isGenerating && generatingStatus && (
+                     <span className="text-xs text-indigo-600 font-medium animate-pulse hidden sm:inline-block">
+                         — {generatingStatus}
+                     </span>
+                 )}
+            </div>
+            {isGenerating && generatingStatus && (
+                 <p className="text-xs text-indigo-600 font-medium animate-pulse mt-1 sm:hidden">
+                     {generatingStatus}
+                 </p>
+             )}
           </div>
         </div>
         <div className="flex items-center gap-4">

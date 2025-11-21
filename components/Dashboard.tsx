@@ -9,6 +9,7 @@ interface DashboardProps {
   modules: Module[];
   onConfigureQuiz: (module: Module, subTopic?: string, contentPoint?: string) => void;
   onViewProgress: () => void;
+  onViewLearningHub: () => void;
   isAdmin: boolean;
   onAdminLoginClick: () => void;
   onLogout: () => void;
@@ -29,16 +30,20 @@ interface DashboardProps {
   onEditSubTopic: (moduleId: number, oldSubTopic: string, newSubTopic: string) => void;
   questionBank: QuestionBank;
   onReturnToHome: () => void;
+  onGenerateModuleAI: (module: Module) => void;
+  generatingModuleId: number | null;
+  generatingStatus: string;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
-  examTitle, modules, onConfigureQuiz, onViewProgress, 
+  examTitle, modules, onConfigureQuiz, onViewProgress, onViewLearningHub,
   isAdmin, onAdminLoginClick, onLogout, onManageQuestions, 
   onExportQuestions, onImportQuestions, onExportTopic, onImportTopic,
   moduleVisibility, onToggleModuleVisibility,
   subTopicVisibility, onToggleSubTopicVisibility,
   contentPointVisibility, onToggleContentPointVisibility,
-  onAddModule, onEditModule, onAddSubTopic, onEditSubTopic, questionBank, onReturnToHome
+  onAddModule, onEditModule, onAddSubTopic, onEditSubTopic, questionBank, onReturnToHome,
+  onGenerateModuleAI, generatingModuleId, generatingStatus
 }) => {
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,6 +85,10 @@ const Dashboard: React.FC<DashboardProps> = ({
             <p className="text-sm">Track your performance, identify weak areas, and monitor improvement over time.</p>
              <button onClick={onViewProgress} className="mt-4 w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg hover:opacity-90 transition-opacity duration-300">
                 View My Progress
+            </button>
+             <button onClick={onViewLearningHub} className="mt-2 w-full py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors duration-300 flex items-center justify-center gap-2">
+                <Icon iconName="book-open" className="h-4 w-4"/>
+                Learning Hub
             </button>
         </div>
         
@@ -146,6 +155,9 @@ const Dashboard: React.FC<DashboardProps> = ({
               onToggleContentPointVisibility={(subTopic, contentPoint) => onToggleContentPointVisibility(module.id, subTopic, contentPoint)}
               onAddSubTopic={(subTopic) => onAddSubTopic(module.id, subTopic)}
               onEditSubTopic={(oldSubTopic, newSubTopic) => onEditSubTopic(module.id, oldSubTopic, newSubTopic)}
+              onGenerateAI={() => onGenerateModuleAI(module)}
+              isGenerating={generatingModuleId === module.id}
+              generatingStatus={generatingStatus}
             />
           ))}
         </div>

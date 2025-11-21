@@ -7,7 +7,7 @@ import LoginView from './components/LoginView';
 import QuestionManager from './components/QuestionManager';
 import Home from './components/Home';
 import Footer from './components/Footer';
-import QuizCustomizationModal from './components/QuizCustomizationModal';
+import QuizCustomizationModal, { QuizStartConfig } from './components/QuizCustomizationModal';
 import ProgressView from './components/ProgressView';
 import LearningHub from './components/LearningHub';
 import { INITIAL_EXAM_DATA } from './constants';
@@ -236,9 +236,10 @@ const App: React.FC = () => {
     }
   }, [questionBank]);
 
-  const handleStartQuiz = useCallback((numberOfQuestions: number, mode: 'study' | 'exam' = 'study', startIndex?: number) => {
+  const handleStartQuiz = useCallback((config: QuizStartConfig) => {
     if (!quizSettings.module || !quizSettings.subTopic) return;
     
+    const { count, mode, shuffle, startIndex } = config;
     const { module, subTopic, contentPoint } = quizSettings;
     const topicIdentifier = getTopicIdentifier(subTopic, contentPoint);
     const allQuestions = questionBank[module.id]?.[topicIdentifier] || [];
@@ -248,12 +249,16 @@ const App: React.FC = () => {
     if (startIndex !== undefined) {
         // Daily / Sequential Mode: Select specific slice WITHOUT shuffling
         // Ensure we don't go out of bounds
-        const end = Math.min(startIndex + numberOfQuestions, allQuestions.length);
+        const end = Math.min(startIndex + count, allQuestions.length);
         selectedQuestions = allQuestions.slice(startIndex, end);
     } else {
-        // Random Mode: Shuffle and pick
-        const shuffled = [...allQuestions].sort(() => 0.5 - Math.random());
-        selectedQuestions = shuffled.slice(0, numberOfQuestions);
+        // Random Mode
+        if (shuffle) {
+             const shuffled = [...allQuestions].sort(() => 0.5 - Math.random());
+             selectedQuestions = shuffled.slice(0, count);
+        } else {
+             selectedQuestions = allQuestions.slice(0, count);
+        }
     }
 
     setActiveModule(module);
@@ -636,25 +641,60 @@ const App: React.FC = () => {
     }, []);
 
   const handleExportQuestions = useCallback(() => {
-    if (Object.keys(questionBank).length === 0) {
-      alert("Question bank is empty. Nothing to export.");
-      return;
-    }
-    
     // Transform ID-based bank to Title-based bank for portability
+    // STRUCTURE AWARE EXPORT: Iterates through Exams to preserve structure of empty modules
     const titleBasedBank: Record<string, any> = {};
-    const allModules = exams.flatMap(e => e.modules);
     
+    // 1. Iterate through all exams and modules to build the structure
+    exams.forEach(exam => {
+        exam.modules.forEach(module => {
+            const moduleQuestions: Record<string, Question[]> = {};
+            
+            // 1a. Get existing questions from the bank
+            if (questionBank[module.id]) {
+                Object.entries(questionBank[module.id]).forEach(([key, val]) => {
+                    moduleQuestions[key] = val;
+                });
+            }
+            
+            // 1b. Ensure all SubTopics are present as keys, even if they have no questions
+            module.subTopics.forEach(st => {
+                // Ensure subtopic key exists
+                if (!moduleQuestions[st.title]) {
+                    moduleQuestions[st.title] = [];
+                }
+                // Ensure content point keys exist
+                st.content.forEach(cp => {
+                    const cpKey = `${st.title}::${cp}`;
+                    if (!moduleQuestions[cpKey]) {
+                        moduleQuestions[cpKey] = [];
+                    }
+                });
+            });
+            
+            // 1c. Add to export object. 
+            // Note: This assumes module titles are unique across exams or we accept merging.
+            if (titleBasedBank[module.title]) {
+                 titleBasedBank[module.title] = { ...titleBasedBank[module.title], ...moduleQuestions };
+            } else {
+                 titleBasedBank[module.title] = moduleQuestions;
+            }
+        });
+    });
+    
+    // 2. Catch any orphan data (questions for modules that might have been deleted but persist in bank)
+    const allModuleIds = new Set(exams.flatMap(e => e.modules.map(m => m.id)));
     Object.entries(questionBank).forEach(([moduleIdStr, topics]) => {
         const moduleId = parseInt(moduleIdStr);
-        const module = allModules.find(m => m.id === moduleId);
-        if (module) {
-            titleBasedBank[module.title] = topics;
-        } else {
-            // Keep ID if module not found (orphan data)
+        if (!allModuleIds.has(moduleId)) {
             titleBasedBank[`ID:${moduleId}`] = topics; 
         }
     });
+
+    if (Object.keys(titleBasedBank).length === 0) {
+        alert("No data to export.");
+        return;
+    }
 
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
       JSON.stringify(titleBasedBank, null, 2)

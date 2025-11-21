@@ -61,6 +61,15 @@ export interface QuizAttempt extends QuizResult {
     timestamp: string;
 }
 
+export interface StudyResource {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  type: 'video' | 'article' | 'pdf' | 'tool';
+  category: string;
+}
+
 export type IconName = 
   'key' | 'shield' | 'mail' | 'smartphone' | 
   'lock' | 'alert' | 'users' | 'shield-check' | 
