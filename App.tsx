@@ -41,6 +41,11 @@ const App: React.FC = () => {
   const [subTopicVisibility, setSubTopicVisibility] = useState<{ [moduleId: number]: { [subTopic: string]: boolean } }>({});
   const [contentPointVisibility, setContentPointVisibility] = useState<{ [moduleId: number]: { [subTopic: string]: { [contentPoint: string]: boolean } } }>({});
   const [exams, setExams] = useState<Exam[]>([]);
+  
+  // Progression Locking State
+  const [unlockedModules, setUnlockedModules] = useState<number[]>([]); // Array of Module IDs
+  const [unlockedSubTopics, setUnlockedSubTopics] = useState<string[]>([]); // Array of "ModuleID-SubTopicTitle" strings
+
   const [quizSettings, setQuizSettings] = useState<{
     isOpen: boolean;
     module: Module | null;
@@ -52,14 +57,42 @@ const App: React.FC = () => {
   const [generatingModuleId, setGeneratingModuleId] = useState<number | null>(null);
   const [generatingStatus, setGeneratingStatus] = useState<string>("");
 
+  // Helper to generate unique key for subtopic locking
+  const getSubTopicLockKey = (moduleId: number, subTopicTitle: string) => `${moduleId}-${subTopicTitle}`;
+
   // Load data from local storage on initial render
   useEffect(() => {
     // Load Exams
     try {
         const savedExams = localStorage.getItem('exams');
-        setExams(savedExams ? JSON.parse(savedExams) : INITIAL_EXAM_DATA);
+        const loadedExams = savedExams ? JSON.parse(savedExams) : INITIAL_EXAM_DATA;
+        setExams(loadedExams);
+
+        // Initialize Locks if empty (Unlock first module of first exam by default)
+        const savedUnlockedMods = localStorage.getItem('unlockedModules');
+        const savedUnlockedSubs = localStorage.getItem('unlockedSubTopics');
+
+        if (savedUnlockedMods) {
+            setUnlockedModules(JSON.parse(savedUnlockedMods));
+        } else if (loadedExams.length > 0 && loadedExams[0].modules.length > 0) {
+             // Default: Unlock 1st module
+             const firstModId = loadedExams[0].modules[0].id;
+             setUnlockedModules([firstModId]);
+             localStorage.setItem('unlockedModules', JSON.stringify([firstModId]));
+        }
+
+        if (savedUnlockedSubs) {
+            setUnlockedSubTopics(JSON.parse(savedUnlockedSubs));
+        } else if (loadedExams.length > 0 && loadedExams[0].modules.length > 0 && loadedExams[0].modules[0].subTopics.length > 0) {
+            // Default: Unlock 1st subtopic of 1st module
+            const firstMod = loadedExams[0].modules[0];
+            const key = getSubTopicLockKey(firstMod.id, firstMod.subTopics[0].title);
+            setUnlockedSubTopics([key]);
+            localStorage.setItem('unlockedSubTopics', JSON.stringify([key]));
+        }
+
     } catch(e) {
-        console.error("Failed to load exams from local storage", e);
+        console.error("Failed to load data from local storage", e);
         setExams(INITIAL_EXAM_DATA);
     }
     
@@ -282,10 +315,67 @@ const App: React.FC = () => {
         timestamp: new Date().toISOString(),
       };
       setQuizHistory(prev => [attempt, ...prev]);
+
+      // --- UNLOCKING LOGIC ---
+      // If user passes (score > 0 for now, can be strict > 70), unlock next section
+      if (result.score > 0 && activeModule && activeSubTopic && !activeContentPoint) {
+         // Find current hierarchy
+         const currentExam = exams.find(e => e.modules.some(m => m.id === activeModule.id));
+         if (currentExam) {
+            const modIndex = currentExam.modules.findIndex(m => m.id === activeModule.id);
+            const subIndex = activeModule.subTopics.findIndex(st => st.title === activeSubTopic);
+
+            if (modIndex !== -1 && subIndex !== -1) {
+                // 1. Is there a next Sub-Topic in THIS module?
+                if (subIndex < activeModule.subTopics.length - 1) {
+                    const nextSubTopic = activeModule.subTopics[subIndex + 1];
+                    const key = getSubTopicLockKey(activeModule.id, nextSubTopic.title);
+                    
+                    if (!unlockedSubTopics.includes(key)) {
+                        const newUnlockedSubs = [...unlockedSubTopics, key];
+                        setUnlockedSubTopics(newUnlockedSubs);
+                        localStorage.setItem('unlockedSubTopics', JSON.stringify(newUnlockedSubs));
+                        // alert(`Congratulations! You've unlocked the next sub-topic: ${nextSubTopic.title}`);
+                    }
+                } 
+                // 2. No next sub-topic, is there a next Module?
+                else if (modIndex < currentExam.modules.length - 1) {
+                    const nextModule = currentExam.modules[modIndex + 1];
+                    
+                    let updatedModules = unlockedModules;
+                    let updatedSubs = unlockedSubTopics;
+                    let changed = false;
+
+                    // Unlock Module
+                    if (!unlockedModules.includes(nextModule.id)) {
+                        updatedModules = [...unlockedModules, nextModule.id];
+                        setUnlockedModules(updatedModules);
+                        localStorage.setItem('unlockedModules', JSON.stringify(updatedModules));
+                        changed = true;
+                    }
+
+                    // Unlock First Sub-Topic of Next Module
+                    if (nextModule.subTopics.length > 0) {
+                        const nextSubKey = getSubTopicLockKey(nextModule.id, nextModule.subTopics[0].title);
+                        if (!unlockedSubTopics.includes(nextSubKey)) {
+                             updatedSubs = [...updatedSubs, nextSubKey];
+                             setUnlockedSubTopics(updatedSubs);
+                             localStorage.setItem('unlockedSubTopics', JSON.stringify(updatedSubs));
+                             changed = true;
+                        }
+                    }
+
+                    if (changed) {
+                        // alert(`Congratulations! You've completed ${activeModule.title} and unlocked ${nextModule.title}!`);
+                    }
+                }
+            }
+         }
+      }
     }
     setLastQuizResult(result);
     setCurrentView('results');
-  }, [activeModule, activeSubTopic, activeContentPoint]);
+  }, [activeModule, activeSubTopic, activeContentPoint, exams, unlockedModules, unlockedSubTopics]);
 
   const handleReturnToDashboard = useCallback(() => {
     setActiveModule(null);
@@ -298,6 +388,10 @@ const App: React.FC = () => {
   const handleClearProgress = useCallback(() => {
     if (window.confirm("Are you sure you want to clear all your progress? This action cannot be undone.")) {
       setQuizHistory([]);
+      // Optionally reset locks here?
+      // localStorage.removeItem('unlockedModules');
+      // localStorage.removeItem('unlockedSubTopics');
+      // window.location.reload();
     }
   }, []);
   
@@ -990,6 +1084,8 @@ const App: React.FC = () => {
                   onGenerateModuleAI={handleGenerateModuleQuestions}
                   generatingModuleId={generatingModuleId}
                   generatingStatus={generatingStatus}
+                  unlockedModules={unlockedModules}
+                  unlockedSubTopics={unlockedSubTopics}
                 />;
         }
         // Fallback to home if no active exam

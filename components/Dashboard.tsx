@@ -33,6 +33,8 @@ interface DashboardProps {
   onGenerateModuleAI: (module: Module) => void;
   generatingModuleId: number | null;
   generatingStatus: string;
+  unlockedModules: number[];
+  unlockedSubTopics: string[];
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
@@ -43,7 +45,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   subTopicVisibility, onToggleSubTopicVisibility,
   contentPointVisibility, onToggleContentPointVisibility,
   onAddModule, onEditModule, onAddSubTopic, onEditSubTopic, questionBank, onReturnToHome,
-  onGenerateModuleAI, generatingModuleId, generatingStatus
+  onGenerateModuleAI, generatingModuleId, generatingStatus,
+  unlockedModules, unlockedSubTopics
 }) => {
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -158,6 +161,8 @@ const Dashboard: React.FC<DashboardProps> = ({
               onGenerateAI={() => onGenerateModuleAI(module)}
               isGenerating={generatingModuleId === module.id}
               generatingStatus={generatingStatus}
+              isLocked={!isAdmin && !unlockedModules.includes(module.id)}
+              unlockedSubTopics={unlockedSubTopics}
             />
           ))}
         </div>

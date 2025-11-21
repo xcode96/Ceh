@@ -23,6 +23,8 @@ interface ModuleListItemProps {
   onGenerateAI?: () => void;
   isGenerating?: boolean;
   generatingStatus?: string;
+  isLocked?: boolean;
+  unlockedSubTopics?: string[];
 }
 
 interface ContentPointItemProps {
@@ -35,9 +37,10 @@ interface ContentPointItemProps {
   onManage: () => void;
   onExport: () => void;
   onImport: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  isLocked?: boolean;
 }
 
-const ContentPointItem: React.FC<ContentPointItemProps> = ({ item, isAdmin, questionCount, onConfigureQuiz, isVisible, onToggleVisibility, onManage, onExport, onImport }) => {
+const ContentPointItem: React.FC<ContentPointItemProps> = ({ item, isAdmin, questionCount, onConfigureQuiz, isVisible, onToggleVisibility, onManage, onExport, onImport, isLocked }) => {
     const importInputRef = useRef<HTMLInputElement>(null);
     const handleImportClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -47,9 +50,9 @@ const ContentPointItem: React.FC<ContentPointItemProps> = ({ item, isAdmin, ques
   return (
     <li className={`text-sm text-gray-600 py-1 list-disc list-inside flex justify-between items-center group ${isAdmin && !isVisible ? 'opacity-40' : ''}`}>
       <div className="flex items-center gap-2">
-        <span>{item}</span>
+        <span className={isLocked && !isAdmin ? 'text-gray-400' : ''}>{item}</span>
         {!isAdmin && questionCount > 0 && (
-            <span className="text-xs font-semibold text-sky-700 bg-sky-100 px-2 py-0.5 rounded-full">
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isLocked ? 'text-gray-400 bg-gray-100' : 'text-sky-700 bg-sky-100'}`}>
                 {questionCount} Qs
             </span>
         )}
@@ -83,14 +86,16 @@ const ContentPointItem: React.FC<ContentPointItemProps> = ({ item, isAdmin, ques
               </button>
             </>
         ) : (
-          <button
-            onClick={(e) => { e.stopPropagation(); onConfigureQuiz(); }}
-            disabled={questionCount === 0}
-            className="px-2 py-0.5 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-full hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed"
-            aria-label={`Start quiz for ${item}`}
-          >
-            {questionCount > 0 ? 'Quiz' : 'No Qs'}
-          </button>
+            !isLocked && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onConfigureQuiz(); }}
+                disabled={questionCount === 0}
+                className="px-2 py-0.5 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-full hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed"
+                aria-label={`Start quiz for ${item}`}
+              >
+                {questionCount > 0 ? 'Quiz' : 'No Qs'}
+              </button>
+            )
         )}
       </div>
     </li>
@@ -112,12 +117,13 @@ interface SubTopicItemProps {
   onToggleVisibility: () => void;
   contentPointVisibility: { [contentPoint: string]: boolean };
   onToggleContentPointVisibility: (contentPoint: string) => void;
+  isLocked?: boolean;
 }
 
 const SubTopicItem: React.FC<SubTopicItemProps> = ({ 
     topic, isAdmin, questionCount, contentPointQuestionCounts, onConfigureSubTopicQuiz, onConfigureContentPointQuiz, onManage, 
     onEdit, onExport, onImport, isVisible, onToggleVisibility, 
-    contentPointVisibility, onToggleContentPointVisibility 
+    contentPointVisibility, onToggleContentPointVisibility, isLocked 
 }) => {
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -135,13 +141,15 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
   };
 
   return (
-    <li className={`flex flex-col rounded-md transition-all duration-200 group ${isAdmin && !isVisible ? 'opacity-40' : ''}`}>
+    <li className={`flex flex-col rounded-md transition-all duration-200 group ${isAdmin && !isVisible ? 'opacity-40' : ''} ${isLocked && !isAdmin ? 'bg-gray-50' : ''}`}>
       <div className={`flex items-start justify-between py-2 px-2 rounded-md`}>
         <div className="flex items-start gap-3">
-            <Icon iconName={'folder'} className="h-5 w-5 text-indigo-500 mt-px" />
+            <div className="relative">
+               <Icon iconName={isLocked && !isAdmin ? 'lock' : 'folder'} className={`h-5 w-5 mt-px ${isLocked && !isAdmin ? 'text-gray-400' : 'text-indigo-500'}`} />
+            </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1">
-                <span className="text-sm font-semibold text-gray-800">{topic.title}</span>
+                <span className={`text-sm font-semibold ${isLocked && !isAdmin ? 'text-gray-500' : 'text-gray-800'}`}>{topic.title}</span>
                 {isAdmin && (
                     <button onClick={handleEdit} title="Edit sub-topic name" className="p-1 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Icon iconName="edit" className="h-3 w-3" />
@@ -168,6 +176,7 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
                               onManage={() => onManage(topic.title, item)}
                               onExport={() => onExport(topic.title, item)}
                               onImport={(e) => onImport(e, topic.title, item)}
+                              isLocked={isLocked}
                            />
                        )
                     })}
@@ -211,14 +220,18 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
             </>
           ) : (
             topic.content.length === 0 && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onConfigureSubTopicQuiz(); }}
-                disabled={questionCount === 0}
-                className="px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-full hover:bg-indigo-200 transition-colors disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed"
-                aria-label={`Start quiz for ${topic.title}`}
-              >
-                Start Quiz
-              </button>
+              isLocked ? (
+                 <span className="text-xs text-gray-400 font-medium px-2 py-1">Locked</span>
+              ) : (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onConfigureSubTopicQuiz(); }}
+                    disabled={questionCount === 0}
+                    className="px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-full hover:bg-indigo-200 transition-colors disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed"
+                    aria-label={`Start quiz for ${topic.title}`}
+                  >
+                    Start Quiz
+                  </button>
+              )
             )
           )}
         </div>
@@ -232,7 +245,8 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
     module, questionBank, onConfigure, isAdmin, onManage, onEdit, onExport, onImport, isVisible, 
     onToggleVisibility, subTopicVisibility, onToggleSubTopicVisibility, 
     contentPointVisibility, onToggleContentPointVisibility,
-    onAddSubTopic, onEditSubTopic, onGenerateAI, isGenerating, generatingStatus
+    onAddSubTopic, onEditSubTopic, onGenerateAI, isGenerating, generatingStatus,
+    isLocked, unlockedSubTopics
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
@@ -268,6 +282,9 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
     if (isAdmin) {
         return <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-2 py-1 rounded-full">Admin Mode</span>;
     }
+    if (isLocked) {
+        return <span className="text-xs font-semibold text-gray-500 bg-gray-200 px-2 py-1 rounded-full flex items-center gap-1"><Icon iconName="lock" className="h-3 w-3"/> Locked</span>;
+    }
     return (
         <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
             totalCustomQuestions > 0 
@@ -281,16 +298,23 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
 
   const visibleSubTopics = isAdmin ? module.subTopics : module.subTopics.filter(topic => subTopicVisibility[topic.title] !== false);
 
+  // Handle click to expand only if not locked or if admin
+  const handleClick = () => {
+      if (isAdmin || !isLocked) {
+          setIsExpanded(!isExpanded);
+      }
+  }
+
   return (
-    <div className={`bg-white rounded-xl shadow-sm hover:bg-gray-50 transition-all duration-300 border border-gray-200 ${isAdmin && !isVisible ? 'opacity-50' : ''}`}>
+    <div className={`bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-300 ${isAdmin && !isVisible ? 'opacity-50' : ''} ${isLocked && !isAdmin ? 'bg-gray-50 opacity-75 cursor-not-allowed' : 'hover:bg-gray-50 cursor-pointer'}`}>
       <div 
-        className="p-4 flex items-center justify-between cursor-pointer"
-        onClick={() => setIsExpanded(!isExpanded)}
+        className="p-4 flex items-center justify-between"
+        onClick={handleClick}
         aria-expanded={isExpanded}
         aria-controls={`module-content-${module.id}`}
         role="button"
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsExpanded(!isExpanded); }}
+        tabIndex={isLocked && !isAdmin ? -1 : 0}
+        onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && (!isLocked || isAdmin)) setIsExpanded(!isExpanded); }}
       >
         <div className="flex items-center gap-4">
           {isAdmin && (
@@ -328,12 +352,12 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
               )}
             </div>
           )}
-          <div className={`p-3 rounded-lg ${module.color}`}>
-            <Icon iconName={module.icon} />
+          <div className={`p-3 rounded-lg ${isLocked && !isAdmin ? 'bg-gray-200 text-gray-400' : module.color}`}>
+            <Icon iconName={isLocked && !isAdmin ? 'lock' : module.icon} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-gray-900">{module.title}</h3>
+              <h3 className={`font-bold ${isLocked && !isAdmin ? 'text-gray-500' : 'text-gray-900'}`}>{module.title}</h3>
               {isAdmin && (
                 <button
                   onClick={handleEditClick}
@@ -361,7 +385,9 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
         </div>
         <div className="flex items-center gap-4">
           {getStatusBadge()}
-          <Icon iconName="chevron-down" className={`h-5 w-5 text-gray-500 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+          {(!isLocked || isAdmin) && (
+            <Icon iconName="chevron-down" className={`h-5 w-5 text-gray-500 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+          )}
         </div>
       </div>
       
@@ -382,6 +408,11 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
                     const subTopicOnlyQuestionCount = moduleQuestions[topic.title]?.length || 0;
                     const totalSubTopicQuestionCount = subTopicOnlyQuestionCount + Object.values(contentPointQuestionCounts).reduce((a, b) => a + b, 0);
                     
+                    // Logic for locked subtopic: 
+                    // If Admin: always unlocked. 
+                    // If User: Module must be unlocked (implied since we are expanded) AND subtopic key must be in unlocked list.
+                    const isSubTopicLocked = !isAdmin && !unlockedSubTopics?.includes(`${module.id}-${topic.title}`);
+
                     return (
                         <SubTopicItem
                           key={index}
@@ -399,6 +430,7 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
                           onToggleVisibility={() => onToggleSubTopicVisibility(topic.title)}
                           contentPointVisibility={contentPointVisibility[topic.title] || {}}
                           onToggleContentPointVisibility={(contentPoint) => onToggleContentPointVisibility(topic.title, contentPoint)}
+                          isLocked={isSubTopicLocked}
                         />
                     );
                 })}
