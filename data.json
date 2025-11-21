@@ -1,0 +1,77 @@
+{
+  "Introduction to Ethical Hacking": {
+    "Information security overview": [
+      {
+        "id": "sample-q1",
+        "question": "Which element of the CIA Triad ensures that data is not modified or tampered with by unauthorized parties?",
+        "options": [
+          "Confidentiality",
+          "Integrity",
+          "Availability",
+          "Authenticity"
+        ],
+        "correctAnswer": "Integrity",
+        "explanation": "Integrity guarantees that data remains accurate and consistent over its entire lifecycle. It ensures that information is not altered by unauthorized people or processes.",
+        "difficulty": "Low"
+      },
+      {
+        "id": "sample-q2",
+        "question": "In the context of information security, what does 'Non-repudiation' guarantee?",
+        "options": [
+          "That a sender cannot deny having sent a message",
+          "That the data is encrypted",
+          "That the system is always available",
+          "That the user is anonymous"
+        ],
+        "correctAnswer": "That a sender cannot deny having sent a message",
+        "explanation": "Non-repudiation provides proof of the origin of data and the integrity of the data. It ensures that the sender cannot deny sending the message or the validity of its contents.",
+        "difficulty": "Medium"
+      }
+    ],
+    "Cyber kill chain": [
+      {
+        "id": "sample-q3",
+        "question": "Which phase of the Cyber Kill Chain involves the attacker researching, identifying, and selecting targets?",
+        "options": [
+          "Weaponization",
+          "Delivery",
+          "Reconnaissance",
+          "Exploitation"
+        ],
+        "correctAnswer": "Reconnaissance",
+        "explanation": "Reconnaissance is the first step where the attacker gathers information about the target to identify vulnerabilities before launching an attack.",
+        "difficulty": "Low"
+      }
+    ]
+  },
+  "Scanning Networks": {
+    "Port scanning": [
+      {
+        "id": "sample-q4",
+        "question": "Which Nmap flag is used to perform a 'Stealth Scan' (SYN Scan)?",
+        "options": [
+          "-sT",
+          "-sS",
+          "-sU",
+          "-sP"
+        ],
+        "correctAnswer": "-sS",
+        "explanation": "-sS performs a TCP SYN scan, also known as a half-open scan. It sends a SYN packet and waits for a response but does not complete the 3-way handshake, making it harder to detect.",
+        "difficulty": "Medium"
+      },
+      {
+        "id": "sample-q5",
+        "question": "What is the primary purpose of a 'Xmas Scan'?",
+        "options": [
+          "To detect open UDP ports",
+          "To identify the operating system",
+          "To send packets with FIN, URG, and PSH flags set to bypass firewalls",
+          "To check for Christmas vulnerabilities"
+        ],
+        "correctAnswer": "To send packets with FIN, URG, and PSH flags set to bypass firewalls",
+        "explanation": "A Xmas scan sets the FIN, URG, and PSH flags, lighting the packet up like a Christmas tree. It is used to manipulate the TCP stack of the target to infer port status and bypass stateless firewalls.",
+        "difficulty": "Advanced"
+      }
+    ]
+  }
+}

@@ -248,6 +248,152 @@ const App: React.FC = () => {
 
   }, []);
 
+  const updateQuestionBank = useCallback((newBank: QuestionBank) => {
+    setQuestionBank(newBank);
+    localStorage.setItem('questionBank', JSON.stringify(newBank));
+  }, []);
+
+
+  // --- CENTRALIZED DATA IMPORT LOGIC ---
+  const processImportedData = useCallback((importedData: any) => {
+      try {
+        // Deep copy current state to mutate
+        const updatedExams = JSON.parse(JSON.stringify(exams));
+        const updatedBank = { ...questionBank };
+        let modulesAdded = 0;
+        let subTopicsAdded = 0;
+        
+        // Visibility updates
+        let newModuleVis = { ...moduleVisibility };
+        let newSubTopicVis = JSON.parse(JSON.stringify(subTopicVisibility));
+        let newContentPointVis = JSON.parse(JSON.stringify(contentPointVisibility));
+
+        const allModules = updatedExams.flatMap((e: Exam) => e.modules);
+        let maxModuleId = allModules.reduce((max: number, m: Module) => Math.max(max, m.id), 0);
+
+        Object.entries(importedData).forEach(([key, topics]) => {
+            // key is Module Title (or legacy ID)
+            // topics is { "SubTopic": [...], "SubTopic::ContentPoint": [...] }
+            
+            let targetModule: Module | undefined;
+
+            // 1. Try match by Title
+            targetModule = updatedExams.flatMap((e: Exam) => e.modules).find((m: Module) => m.title === key);
+
+            // 2. Try match by Legacy ID
+            if (!targetModule && /^\d+$/.test(key)) {
+                const id = parseInt(key, 10);
+                targetModule = updatedExams.flatMap((e: Exam) => e.modules).find((m: Module) => m.id === id);
+            }
+
+            // 3. If not found, create new module (Only if we have a valid exam structure loaded)
+            // Note: If importing via file fetch on load, activeExamId might be null. 
+            // We default to the first exam if available, or fail gracefully.
+            if (!targetModule && updatedExams.length > 0) {
+                 // Default to adding to the first Exam if activeExamId is unavailable (e.g. on auto-load)
+                 const targetExamId = activeExamId || updatedExams[0].id;
+                 const activeExamIndex = updatedExams.findIndex((e: Exam) => e.id === targetExamId);
+                 
+                 if (activeExamIndex !== -1) {
+                     maxModuleId++;
+                     const newModule: Module = {
+                         id: maxModuleId,
+                         title: key.startsWith('ID:') ? `Imported Module ${maxModuleId}` : key,
+                         icon: 'folder', // Default icon
+                         color: 'bg-gray-100 text-gray-600',
+                         subTopics: []
+                     };
+                     updatedExams[activeExamIndex].modules.push(newModule);
+                     targetModule = newModule;
+                     modulesAdded++;
+                     
+                     // Init visibility
+                     newModuleVis[newModule.id] = true;
+                     newSubTopicVis[newModule.id] = {};
+                     newContentPointVis[newModule.id] = {};
+                 }
+            }
+
+            if (targetModule) {
+                // Merge Questions
+                updatedBank[targetModule.id] = { ...(updatedBank[targetModule.id] || {}), ...(topics as any) };
+
+                // Sync Structure (SubTopics & Content Points)
+                const importedTopics = topics as Record<string, any>;
+                Object.keys(importedTopics).forEach(topicKey => {
+                    const [subTopicTitle, contentPointTitle] = topicKey.split('::');
+                    
+                    // Ensure SubTopic exists
+                    let subTopic = targetModule!.subTopics.find(st => st.title === subTopicTitle);
+                    if (!subTopic) {
+                        subTopic = { title: subTopicTitle, content: [] };
+                        targetModule!.subTopics.push(subTopic);
+                        subTopicsAdded++;
+                        
+                        // Init visibility
+                        if (!newSubTopicVis[targetModule!.id]) newSubTopicVis[targetModule!.id] = {};
+                        newSubTopicVis[targetModule!.id][subTopicTitle] = true;
+                    }
+
+                    // Ensure Content Point exists (if applicable)
+                    if (contentPointTitle) {
+                        if (!subTopic.content.includes(contentPointTitle)) {
+                            subTopic.content.push(contentPointTitle);
+                            
+                            // Init visibility
+                            if (!newContentPointVis[targetModule!.id]) newContentPointVis[targetModule!.id] = {};
+                            if (!newContentPointVis[targetModule!.id][subTopicTitle]) newContentPointVis[targetModule!.id][subTopicTitle] = {};
+                            newContentPointVis[targetModule!.id][subTopicTitle][contentPointTitle] = true;
+                        }
+                    }
+                });
+            }
+        });
+
+        // Commit updates
+        setExams(updatedExams);
+        updateQuestionBank(updatedBank);
+        
+        setModuleVisibility(newModuleVis);
+        localStorage.setItem('moduleVisibility', JSON.stringify(newModuleVis));
+        
+        setSubTopicVisibility(newSubTopicVis);
+        localStorage.setItem('subTopicVisibility', JSON.stringify(newSubTopicVis));
+        
+        setContentPointVisibility(newContentPointVis);
+        localStorage.setItem('contentPointVisibility', JSON.stringify(newContentPointVis));
+        
+        return { modulesAdded, subTopicsAdded };
+
+      } catch (error) {
+        console.error("Process Data Error", error);
+        throw error;
+      }
+  }, [exams, questionBank, activeExamId, updateQuestionBank, moduleVisibility, subTopicVisibility, contentPointVisibility]);
+
+  // --- AUTO-FETCH DATA.JSON ON LOAD ---
+  useEffect(() => {
+      // Only run this check once exams are initialized to avoid overwriting with empty state
+      if (exams.length === 0) return;
+
+      const loadExternalData = async () => {
+          try {
+              const response = await fetch('data.json');
+              if (response.ok) {
+                  const jsonData = await response.json();
+                  console.log("Found data.json, attempting auto-import...");
+                  processImportedData(jsonData);
+                  console.log("Auto-import completed.");
+              }
+          } catch (error) {
+              // Silent fail if file doesn't exist - this is expected for normal users
+              console.debug("No external data.json found or failed to load.");
+          }
+      };
+
+      loadExternalData();
+  }, [exams.length]); // Run when exams are first loaded
+
   // Effect to save exams to local storage whenever they change
   useEffect(() => {
     if (exams.length > 0) {
@@ -438,11 +584,6 @@ const App: React.FC = () => {
     setActiveSubTopic(subTopic);
     setActiveContentPoint(contentPoint || null);
     setQuestionManagerOpen(true);
-  }, []);
-
-  const updateQuestionBank = useCallback((newBank: QuestionBank) => {
-    setQuestionBank(newBank);
-    localStorage.setItem('questionBank', JSON.stringify(newBank));
   }, []);
 
   const handleToggleModuleVisibility = useCallback((moduleId: number) => {
@@ -831,108 +972,8 @@ const App: React.FC = () => {
              throw new Error("Invalid JSON format.");
         }
 
-        // Deep copy current state to mutate
-        const updatedExams = JSON.parse(JSON.stringify(exams));
-        const updatedBank = { ...questionBank };
-        let modulesAdded = 0;
-        let subTopicsAdded = 0;
-        
-        // Visibility updates
-        let newModuleVis = { ...moduleVisibility };
-        let newSubTopicVis = JSON.parse(JSON.stringify(subTopicVisibility));
-        let newContentPointVis = JSON.parse(JSON.stringify(contentPointVisibility));
-
-        const allModules = updatedExams.flatMap((e: Exam) => e.modules);
-        let maxModuleId = allModules.reduce((max: number, m: Module) => Math.max(max, m.id), 0);
-
-        Object.entries(importedData).forEach(([key, topics]) => {
-            // key is Module Title (or legacy ID)
-            // topics is { "SubTopic": [...], "SubTopic::ContentPoint": [...] }
-            
-            let targetModule: Module | undefined;
-
-            // 1. Try match by Title
-            targetModule = updatedExams.flatMap((e: Exam) => e.modules).find((m: Module) => m.title === key);
-
-            // 2. Try match by Legacy ID
-            if (!targetModule && /^\d+$/.test(key)) {
-                const id = parseInt(key, 10);
-                targetModule = updatedExams.flatMap((e: Exam) => e.modules).find((m: Module) => m.id === id);
-            }
-
-            // 3. If not found, create new module (if we have an active exam to put it in)
-            if (!targetModule && activeExamId) {
-                 const activeExamIndex = updatedExams.findIndex((e: Exam) => e.id === activeExamId);
-                 if (activeExamIndex !== -1) {
-                     maxModuleId++;
-                     const newModule: Module = {
-                         id: maxModuleId,
-                         title: key.startsWith('ID:') ? `Imported Module ${maxModuleId}` : key,
-                         icon: 'folder', // Default icon
-                         color: 'bg-gray-100 text-gray-600',
-                         subTopics: []
-                     };
-                     updatedExams[activeExamIndex].modules.push(newModule);
-                     targetModule = newModule;
-                     modulesAdded++;
-                     
-                     // Init visibility
-                     newModuleVis[newModule.id] = true;
-                     newSubTopicVis[newModule.id] = {};
-                     newContentPointVis[newModule.id] = {};
-                 }
-            }
-
-            if (targetModule) {
-                // Merge Questions
-                updatedBank[targetModule.id] = { ...(updatedBank[targetModule.id] || {}), ...(topics as any) };
-
-                // Sync Structure (SubTopics & Content Points)
-                const importedTopics = topics as Record<string, any>;
-                Object.keys(importedTopics).forEach(topicKey => {
-                    const [subTopicTitle, contentPointTitle] = topicKey.split('::');
-                    
-                    // Ensure SubTopic exists
-                    let subTopic = targetModule!.subTopics.find(st => st.title === subTopicTitle);
-                    if (!subTopic) {
-                        subTopic = { title: subTopicTitle, content: [] };
-                        targetModule!.subTopics.push(subTopic);
-                        subTopicsAdded++;
-                        
-                        // Init visibility
-                        if (!newSubTopicVis[targetModule!.id]) newSubTopicVis[targetModule!.id] = {};
-                        newSubTopicVis[targetModule!.id][subTopicTitle] = true;
-                    }
-
-                    // Ensure Content Point exists (if applicable)
-                    if (contentPointTitle) {
-                        if (!subTopic.content.includes(contentPointTitle)) {
-                            subTopic.content.push(contentPointTitle);
-                            
-                            // Init visibility
-                            if (!newContentPointVis[targetModule!.id]) newContentPointVis[targetModule!.id] = {};
-                            if (!newContentPointVis[targetModule!.id][subTopicTitle]) newContentPointVis[targetModule!.id][subTopicTitle] = {};
-                            newContentPointVis[targetModule!.id][subTopicTitle][contentPointTitle] = true;
-                        }
-                    }
-                });
-            }
-        });
-
-        // Commit updates
-        setExams(updatedExams);
-        updateQuestionBank(updatedBank);
-        
-        setModuleVisibility(newModuleVis);
-        localStorage.setItem('moduleVisibility', JSON.stringify(newModuleVis));
-        
-        setSubTopicVisibility(newSubTopicVis);
-        localStorage.setItem('subTopicVisibility', JSON.stringify(newSubTopicVis));
-        
-        setContentPointVisibility(newContentPointVis);
-        localStorage.setItem('contentPointVisibility', JSON.stringify(newContentPointVis));
-
-        alert(`Import successful!\n\nModules Added: ${modulesAdded}\nSub-topics synced: ${subTopicsAdded}`);
+        const result = processImportedData(importedData);
+        alert(`Import successful!\n\nModules Added: ${result.modulesAdded}\nSub-topics synced: ${result.subTopicsAdded}`);
 
       } catch (error) {
         console.error("Import failed", error);
@@ -941,7 +982,7 @@ const App: React.FC = () => {
       event.target.value = '';
     };
     reader.readAsText(file);
-  }, [exams, questionBank, activeExamId, updateQuestionBank, moduleVisibility, subTopicVisibility, contentPointVisibility]);
+  }, [processImportedData]);
 
   const handleExportTopic = useCallback((module: Module, subTopic: string, contentPoint?: string) => {
     const topicIdentifier = getTopicIdentifier(subTopic, contentPoint);
