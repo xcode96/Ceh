@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
 import QuizView from './components/QuizView';
@@ -6,13 +7,14 @@ import LoginView from './components/LoginView';
 import QuestionManager from './components/QuestionManager';
 import Home from './components/Home';
 import Footer from './components/Footer';
-import QuizCustomizationModal, { QuizStartConfig } from './components/QuizCustomizationModal';
+import QuizCustomizationModal from './components/QuizCustomizationModal';
 import ProgressView from './components/ProgressView';
+import LearningHub from './components/LearningHub';
 import { INITIAL_EXAM_DATA } from './constants';
 import { generateQuestionsForModule } from './services/geminiService';
-import type { Module, QuestionBank, Question, Exam, SubTopic, QuizResult, QuizAttempt, DifficultyLevel } from './types';
+import type { Module, QuestionBank, Question, Exam, SubTopic, QuizResult, QuizAttempt, DifficultyLevel, StudyResource } from './types';
 
-type View = 'dashboard' | 'quiz' | 'results' | 'progress' | 'home';
+type View = 'dashboard' | 'quiz' | 'results' | 'progress' | 'home' | 'learning-hub';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('home');
@@ -26,6 +28,9 @@ const App: React.FC = () => {
   // Quiz Results & History
   const [lastQuizResult, setLastQuizResult] = useState<QuizResult | null>(null);
   const [quizHistory, setQuizHistory] = useState<QuizAttempt[]>([]);
+
+  // Learning Hub Resources
+  const [studyResources, setStudyResources] = useState<StudyResource[]>([]);
 
   // Admin and Question Bank State
   const [isAdmin, setIsAdmin] = useState(false);
@@ -43,6 +48,9 @@ const App: React.FC = () => {
     contentPoint: string | null;
     availableQuestions: number;
   }>({ isOpen: false, module: null, subTopic: null, contentPoint: null, availableQuestions: 0 });
+
+  const [generatingModuleId, setGeneratingModuleId] = useState<number | null>(null);
+  const [generatingStatus, setGeneratingStatus] = useState<string>("");
 
   // Load data from local storage on initial render
   useEffect(() => {
@@ -73,6 +81,16 @@ const App: React.FC = () => {
       }
     } catch(error) {
       console.error("Failed to load quiz history from local storage", error);
+    }
+    
+    // Load Study Resources
+    try {
+        const savedResources = localStorage.getItem('studyResources');
+        if (savedResources) {
+            setStudyResources(JSON.parse(savedResources));
+        }
+    } catch(error) {
+        console.error("Failed to load study resources", error);
     }
 
     const allModules = INITIAL_EXAM_DATA.flatMap(e => e.modules);
@@ -188,6 +206,13 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('quizHistory', JSON.stringify(quizHistory));
   }, [quizHistory]);
+  
+  // Effect to save resources
+  useEffect(() => {
+      if (studyResources.length > 0) {
+          localStorage.setItem('studyResources', JSON.stringify(studyResources));
+      }
+  }, [studyResources]);
 
   const getTopicIdentifier = (subTopic: string, contentPoint?: string | null) => {
     return contentPoint ? `${subTopic}::${contentPoint}` : subTopic;
@@ -211,7 +236,7 @@ const App: React.FC = () => {
     }
   }, [questionBank]);
 
-  const handleStartQuiz = useCallback((config: QuizStartConfig) => {
+  const handleStartQuiz = useCallback((numberOfQuestions: number, mode: 'study' | 'exam' = 'study', startIndex?: number) => {
     if (!quizSettings.module || !quizSettings.subTopic) return;
     
     const { module, subTopic, contentPoint } = quizSettings;
@@ -220,22 +245,22 @@ const App: React.FC = () => {
 
     let selectedQuestions: Question[] = [];
 
-    if (config.shuffle) {
-        // Random selection (Custom Quiz)
-        const shuffled = [...allQuestions].sort(() => 0.5 - Math.random());
-        selectedQuestions = shuffled.slice(0, config.count);
+    if (startIndex !== undefined) {
+        // Daily / Sequential Mode: Select specific slice WITHOUT shuffling
+        // Ensure we don't go out of bounds
+        const end = Math.min(startIndex + numberOfQuestions, allQuestions.length);
+        selectedQuestions = allQuestions.slice(startIndex, end);
     } else {
-        // Sequential selection (Daily Challenge)
-        // Ensure startIndex is valid
-        const start = config.startIndex || 0;
-        selectedQuestions = allQuestions.slice(start, start + config.count);
+        // Random Mode: Shuffle and pick
+        const shuffled = [...allQuestions].sort(() => 0.5 - Math.random());
+        selectedQuestions = shuffled.slice(0, numberOfQuestions);
     }
 
     setActiveModule(module);
     setActiveSubTopic(subTopic);
     setActiveContentPoint(contentPoint);
     setActiveQuizQuestions(selectedQuestions);
-    setActiveQuizMode(config.mode);
+    setActiveQuizMode(mode);
     setCurrentView('quiz');
     setQuizSettings({ isOpen: false, module: null, subTopic: null, contentPoint: null, availableQuestions: 0 });
   }, [questionBank, quizSettings]);
@@ -273,6 +298,10 @@ const App: React.FC = () => {
   
   const handleViewProgress = useCallback(() => {
     setCurrentView('progress');
+  }, []);
+  
+  const handleViewLearningHub = useCallback(() => {
+      setCurrentView('learning-hub');
   }, []);
 
   const handleAdminLogin = (success: boolean) => {
@@ -366,6 +395,69 @@ const App: React.FC = () => {
         throw error;
       }
   };
+
+  const handleGenerateModuleQuestions = useCallback(async (module: Module) => {
+    if (generatingModuleId !== null) return;
+    
+    const subTopicCount = module.subTopics.length;
+    if (subTopicCount === 0) {
+        alert("This module has no sub-topics.");
+        return;
+    }
+
+    const confirmMsg = `🤖 Bulk AI Generation\n\nThis will generate 5 'Medium' difficulty questions for ALL ${subTopicCount} sub-topics in "${module.title}".\n\nTotal questions to generate: ${subTopicCount * 5}\nEstimated time: ~${Math.ceil(subTopicCount * 2 / 60)} minutes.\n\nContinue?`;
+    
+    if (!window.confirm(confirmMsg)) return;
+
+    setGeneratingModuleId(module.id);
+    setGeneratingStatus("Initializing...");
+
+    try {
+        const newBank = JSON.parse(JSON.stringify(questionBank)); // Deep copy
+        if (!newBank[module.id]) newBank[module.id] = {};
+
+        // Process sequentially to avoid rate limits
+        for (let i = 0; i < module.subTopics.length; i++) {
+            const subTopic = module.subTopics[i];
+            setGeneratingStatus(`Processing: ${subTopic.title} (${i + 1}/${module.subTopics.length})`);
+            
+            try {
+                const generatedQs = await generateQuestionsForModule(
+                    module.title,
+                    module.subTopics,
+                    subTopic.title,
+                    null,
+                    5, // Count per sub-topic
+                    'Medium' // Difficulty
+                );
+
+                const questionsWithIds = generatedQs.map(q => ({
+                    ...q,
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                }));
+
+                const topicId = subTopic.title;
+                // Append to existing
+                newBank[module.id][topicId] = [
+                    ...(newBank[module.id][topicId] || []),
+                    ...questionsWithIds
+                ];
+            } catch (e) {
+                console.error(`Error generating for sub-topic ${subTopic.title}:`, e);
+            }
+        }
+
+        updateQuestionBank(newBank);
+        setGeneratingStatus("Completed!");
+        alert(`✅ Bulk generation complete for ${module.title}! Questions added to Question Bank.`);
+    } catch (err) {
+        console.error("Bulk generation error:", err);
+        alert("An error occurred during bulk generation.");
+    } finally {
+        setGeneratingModuleId(null);
+        setGeneratingStatus("");
+    }
+  }, [questionBank, updateQuestionBank, generatingModuleId]);
 
     const handleAddModule = useCallback((title: string) => {
         if (!title || title.trim() === '' || !activeExamId) return;
@@ -548,14 +640,30 @@ const App: React.FC = () => {
       alert("Question bank is empty. Nothing to export.");
       return;
     }
+    
+    // Transform ID-based bank to Title-based bank for portability
+    const titleBasedBank: Record<string, any> = {};
+    const allModules = exams.flatMap(e => e.modules);
+    
+    Object.entries(questionBank).forEach(([moduleIdStr, topics]) => {
+        const moduleId = parseInt(moduleIdStr);
+        const module = allModules.find(m => m.id === moduleId);
+        if (module) {
+            titleBasedBank[module.title] = topics;
+        } else {
+            // Keep ID if module not found (orphan data)
+            titleBasedBank[`ID:${moduleId}`] = topics; 
+        }
+    });
+
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(questionBank, null, 2)
+      JSON.stringify(titleBasedBank, null, 2)
     )}`;
     const link = document.createElement("a");
     link.href = jsonString;
     link.download = "cyber-security-question-bank.json";
     link.click();
-  }, [questionBank]);
+  }, [questionBank, exams]);
 
   const handleImportQuestions = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -565,29 +673,124 @@ const App: React.FC = () => {
     reader.onload = (e) => {
       try {
         const text = e.target?.result;
-        if (typeof text !== 'string') {
-          throw new Error("Failed to read file.");
+        if (typeof text !== 'string') throw new Error("Failed to read file.");
+        
+        const importedData = JSON.parse(text);
+        if (typeof importedData !== 'object' || importedData === null || Array.isArray(importedData)) {
+             throw new Error("Invalid JSON format.");
         }
-        const importedBank = JSON.parse(text);
-        if (typeof importedBank === 'object' && importedBank !== null && !Array.isArray(importedBank)) {
-          updateQuestionBank(importedBank);
-          alert("Question bank imported successfully!");
-        } else {
-          throw new Error("Invalid JSON format. The file should contain a JSON object.");
-        }
+
+        // Deep copy current state to mutate
+        const updatedExams = JSON.parse(JSON.stringify(exams));
+        const updatedBank = { ...questionBank };
+        let modulesAdded = 0;
+        let subTopicsAdded = 0;
+        
+        // Visibility updates
+        let newModuleVis = { ...moduleVisibility };
+        let newSubTopicVis = JSON.parse(JSON.stringify(subTopicVisibility));
+        let newContentPointVis = JSON.parse(JSON.stringify(contentPointVisibility));
+
+        const allModules = updatedExams.flatMap((e: Exam) => e.modules);
+        let maxModuleId = allModules.reduce((max: number, m: Module) => Math.max(max, m.id), 0);
+
+        Object.entries(importedData).forEach(([key, topics]) => {
+            // key is Module Title (or legacy ID)
+            // topics is { "SubTopic": [...], "SubTopic::ContentPoint": [...] }
+            
+            let targetModule: Module | undefined;
+
+            // 1. Try match by Title
+            targetModule = updatedExams.flatMap((e: Exam) => e.modules).find((m: Module) => m.title === key);
+
+            // 2. Try match by Legacy ID
+            if (!targetModule && /^\d+$/.test(key)) {
+                const id = parseInt(key, 10);
+                targetModule = updatedExams.flatMap((e: Exam) => e.modules).find((m: Module) => m.id === id);
+            }
+
+            // 3. If not found, create new module (if we have an active exam to put it in)
+            if (!targetModule && activeExamId) {
+                 const activeExamIndex = updatedExams.findIndex((e: Exam) => e.id === activeExamId);
+                 if (activeExamIndex !== -1) {
+                     maxModuleId++;
+                     const newModule: Module = {
+                         id: maxModuleId,
+                         title: key.startsWith('ID:') ? `Imported Module ${maxModuleId}` : key,
+                         icon: 'folder', // Default icon
+                         color: 'bg-gray-100 text-gray-600',
+                         subTopics: []
+                     };
+                     updatedExams[activeExamIndex].modules.push(newModule);
+                     targetModule = newModule;
+                     modulesAdded++;
+                     
+                     // Init visibility
+                     newModuleVis[newModule.id] = true;
+                     newSubTopicVis[newModule.id] = {};
+                     newContentPointVis[newModule.id] = {};
+                 }
+            }
+
+            if (targetModule) {
+                // Merge Questions
+                updatedBank[targetModule.id] = { ...(updatedBank[targetModule.id] || {}), ...(topics as any) };
+
+                // Sync Structure (SubTopics & Content Points)
+                const importedTopics = topics as Record<string, any>;
+                Object.keys(importedTopics).forEach(topicKey => {
+                    const [subTopicTitle, contentPointTitle] = topicKey.split('::');
+                    
+                    // Ensure SubTopic exists
+                    let subTopic = targetModule!.subTopics.find(st => st.title === subTopicTitle);
+                    if (!subTopic) {
+                        subTopic = { title: subTopicTitle, content: [] };
+                        targetModule!.subTopics.push(subTopic);
+                        subTopicsAdded++;
+                        
+                        // Init visibility
+                        if (!newSubTopicVis[targetModule!.id]) newSubTopicVis[targetModule!.id] = {};
+                        newSubTopicVis[targetModule!.id][subTopicTitle] = true;
+                    }
+
+                    // Ensure Content Point exists (if applicable)
+                    if (contentPointTitle) {
+                        if (!subTopic.content.includes(contentPointTitle)) {
+                            subTopic.content.push(contentPointTitle);
+                            
+                            // Init visibility
+                            if (!newContentPointVis[targetModule!.id]) newContentPointVis[targetModule!.id] = {};
+                            if (!newContentPointVis[targetModule!.id][subTopicTitle]) newContentPointVis[targetModule!.id][subTopicTitle] = {};
+                            newContentPointVis[targetModule!.id][subTopicTitle][contentPointTitle] = true;
+                        }
+                    }
+                });
+            }
+        });
+
+        // Commit updates
+        setExams(updatedExams);
+        updateQuestionBank(updatedBank);
+        
+        setModuleVisibility(newModuleVis);
+        localStorage.setItem('moduleVisibility', JSON.stringify(newModuleVis));
+        
+        setSubTopicVisibility(newSubTopicVis);
+        localStorage.setItem('subTopicVisibility', JSON.stringify(newSubTopicVis));
+        
+        setContentPointVisibility(newContentPointVis);
+        localStorage.setItem('contentPointVisibility', JSON.stringify(newContentPointVis));
+
+        alert(`Import successful!\n\nModules Added: ${modulesAdded}\nSub-topics synced: ${subTopicsAdded}`);
+
       } catch (error) {
-        const err = error as Error;
-        console.error("Failed to import question bank:", err);
-        alert(`Failed to import question bank. Please ensure the file is valid JSON. Error: ${err.message}`);
+        console.error("Import failed", error);
+        alert("Failed to import. Check console for details.");
       }
       event.target.value = '';
     };
-     reader.onerror = () => {
-        alert("Error reading the file.");
-        event.target.value = '';
-    }
     reader.readAsText(file);
-  }, [updateQuestionBank]);
+  }, [exams, questionBank, activeExamId, updateQuestionBank, moduleVisibility, subTopicVisibility, contentPointVisibility]);
 
   const handleExportTopic = useCallback((module: Module, subTopic: string, contentPoint?: string) => {
     const topicIdentifier = getTopicIdentifier(subTopic, contentPoint);
@@ -646,6 +849,17 @@ const App: React.FC = () => {
     };
     reader.readAsText(file);
   }, [questionBank, updateQuestionBank]);
+
+  // Resource Handlers
+  const handleAddResource = useCallback((resource: StudyResource) => {
+      setStudyResources(prev => [resource, ...prev]);
+  }, []);
+
+  const handleDeleteResource = useCallback((id: string) => {
+      if (window.confirm("Delete this resource?")) {
+          setStudyResources(prev => prev.filter(r => r.id !== id));
+      }
+  }, []);
   
   const handleSelectExam = (examId: number) => {
     setActiveExamId(examId);
@@ -696,6 +910,15 @@ const App: React.FC = () => {
               onReturnToDashboard={handleReturnToDashboard}
               onClearProgress={handleClearProgress}
           />;
+      case 'learning-hub':
+          return <LearningHub 
+            exams={exams}
+            resources={studyResources}
+            isAdmin={isAdmin}
+            onAddResource={handleAddResource}
+            onDeleteResource={handleDeleteResource}
+            onReturnToHome={handleReturnToHome}
+          />;
       case 'dashboard':
         if (activeExam) {
             return <Dashboard 
@@ -703,6 +926,7 @@ const App: React.FC = () => {
                   modules={activeExam.modules} 
                   onConfigureQuiz={handleConfigureQuiz} 
                   onViewProgress={handleViewProgress}
+                  onViewLearningHub={handleViewLearningHub}
                   isAdmin={isAdmin}
                   onAdminLoginClick={() => setLoginModalOpen(true)}
                   onLogout={handleLogout}
@@ -723,6 +947,9 @@ const App: React.FC = () => {
                   onEditSubTopic={handleEditSubTopic}
                   questionBank={questionBank}
                   onReturnToHome={handleReturnToHome}
+                  onGenerateModuleAI={handleGenerateModuleQuestions}
+                  generatingModuleId={generatingModuleId}
+                  generatingStatus={generatingStatus}
                 />;
         }
         // Fallback to home if no active exam
@@ -739,6 +966,7 @@ const App: React.FC = () => {
             onAddExam={handleAddExam}
             onAdminLoginClick={() => setLoginModalOpen(true)}
             onLogout={handleLogout}
+            onViewLearningHub={handleViewLearningHub}
         />;
     }
   };
