@@ -1,4 +1,3 @@
-
 import React, { useRef, useMemo, useState } from 'react';
 import ModuleListItem from './ModuleListItem';
 import Icon from './Icon';
@@ -36,6 +35,8 @@ interface DashboardProps {
   unlockedModules: number[];
   unlockedSubTopics: string[];
   onUnlockCode: (code: string) => void;
+  syncStatus?: 'idle' | 'syncing' | 'synced' | 'error';
+  onManualSync?: () => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
@@ -47,7 +48,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   contentPointVisibility, onToggleContentPointVisibility,
   onAddModule, onEditModule, onAddSubTopic, onEditSubTopic, questionBank, onReturnToHome,
   onGenerateModuleAI, generatingModuleId, generatingStatus,
-  unlockedModules, unlockedSubTopics, onUnlockCode
+  unlockedModules, unlockedSubTopics, onUnlockCode, syncStatus, onManualSync
 }) => {
   const importInputRef = useRef<HTMLInputElement>(null);
   const [unlockCodeInput, setUnlockCodeInput] = useState('');
@@ -143,6 +144,31 @@ const Dashboard: React.FC<DashboardProps> = ({
                    </button>
                </div>
           </div>
+        )}
+        
+        {/* Sync Status Indicator */}
+        {syncStatus && (
+            <div className="mt-4 w-full flex items-center justify-between text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                 <div className="flex items-center gap-2">
+                     <span className={`h-2 w-2 rounded-full ${
+                         syncStatus === 'syncing' ? 'bg-yellow-400 animate-pulse' : 
+                         syncStatus === 'synced' ? 'bg-green-500' : 
+                         syncStatus === 'error' ? 'bg-red-500' : 'bg-gray-300'
+                     }`}></span>
+                     <span>
+                        {syncStatus === 'syncing' ? 'Syncing Data...' : 
+                         syncStatus === 'synced' ? 'Data Synced' : 
+                         syncStatus === 'error' ? 'Sync Failed' : 'Offline'}
+                     </span>
+                 </div>
+                 {onManualSync && (
+                     <button onClick={onManualSync} title="Check for updates" className="hover:text-indigo-600 transition-colors">
+                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                         </svg>
+                     </button>
+                 )}
+            </div>
         )}
       </aside>
 

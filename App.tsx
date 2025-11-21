@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import Dashboard from './components/Dashboard';
 import QuizView from './components/QuizView';
 import QuizResultsView from './components/QuizResultsView';
@@ -10,11 +10,12 @@ import Footer from './components/Footer';
 import QuizCustomizationModal, { QuizStartConfig } from './components/QuizCustomizationModal';
 import ProgressView from './components/ProgressView';
 import LearningHub from './components/LearningHub';
-import { INITIAL_EXAM_DATA } from './constants';
+import { INITIAL_EXAM_DATA, INITIAL_QUESTION_BANK } from './constants';
 import { generateQuestionsForModule } from './services/geminiService';
 import type { Module, QuestionBank, Question, Exam, SubTopic, QuizResult, QuizAttempt, DifficultyLevel, StudyResource } from './types';
 
 type View = 'dashboard' | 'quiz' | 'results' | 'progress' | 'home' | 'learning-hub';
+type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error';
 
 // Helper to generate unique key for subtopic locking
 const getSubTopicLockKey = (moduleId: number, subTopicTitle: string) => `${moduleId}-${subTopicTitle}`;
@@ -39,12 +40,51 @@ const App: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoginModalOpen, setLoginModalOpen] = useState(false);
   const [isQuestionManagerOpen, setQuestionManagerOpen] = useState(false);
-  const [questionBank, setQuestionBank] = useState<QuestionBank>({});
+  
+  // Initialize QuestionBank from localStorage OR from INITIAL_QUESTION_BANK (constants.ts)
+  const [questionBank, setQuestionBank] = useState<QuestionBank>(() => {
+      try {
+          const savedBank = localStorage.getItem('questionBank');
+          if (savedBank) {
+              return JSON.parse(savedBank);
+          }
+          return INITIAL_QUESTION_BANK;
+      } catch {
+          return INITIAL_QUESTION_BANK;
+      }
+  });
+
   const [moduleVisibility, setModuleVisibility] = useState<{ [moduleId: number]: boolean }>({});
   const [subTopicVisibility, setSubTopicVisibility] = useState<{ [moduleId: number]: { [subTopic: string]: boolean } }>({});
   const [contentPointVisibility, setContentPointVisibility] = useState<{ [moduleId: number]: { [subTopic: string]: { [contentPoint: string]: boolean } } }>({});
-  const [exams, setExams] = useState<Exam[]>([]);
   
+  // Initialize Exams from localStorage OR from INITIAL_EXAM_DATA (constants.ts)
+  const [exams, setExams] = useState<Exam[]>(() => {
+      try {
+          const savedExams = localStorage.getItem('exams');
+          return savedExams ? JSON.parse(savedExams) : INITIAL_EXAM_DATA;
+      } catch {
+          return INITIAL_EXAM_DATA;
+      }
+  });
+  
+  // Sync Status
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+
+  // REFS: Keep track of latest state to avoid stale closures in async operations
+  const examsRef = useRef(exams);
+  const questionBankRef = useRef(questionBank);
+  const moduleVisibilityRef = useRef(moduleVisibility);
+  const subTopicVisibilityRef = useRef(subTopicVisibility);
+  const contentPointVisibilityRef = useRef(contentPointVisibility);
+
+  // Update refs whenever state changes
+  useEffect(() => { examsRef.current = exams; }, [exams]);
+  useEffect(() => { questionBankRef.current = questionBank; }, [questionBank]);
+  useEffect(() => { moduleVisibilityRef.current = moduleVisibility; }, [moduleVisibility]);
+  useEffect(() => { subTopicVisibilityRef.current = subTopicVisibility; }, [subTopicVisibility]);
+  useEffect(() => { contentPointVisibilityRef.current = contentPointVisibility; }, [contentPointVisibility]);
+
   // Progression Locking State - Lazy Initialization from LocalStorage
   const [unlockedModules, setUnlockedModules] = useState<number[]>(() => {
     try {
@@ -106,26 +146,6 @@ const App: React.FC = () => {
 
   // Load other data from local storage on initial render
   useEffect(() => {
-    // Load Exams
-    try {
-        const savedExams = localStorage.getItem('exams');
-        const loadedExams = savedExams ? JSON.parse(savedExams) : INITIAL_EXAM_DATA;
-        setExams(loadedExams);
-    } catch(e) {
-        console.error("Failed to load exams from local storage", e);
-        setExams(INITIAL_EXAM_DATA);
-    }
-    
-    // Load Question Bank
-    try {
-      const savedBank = localStorage.getItem('questionBank');
-      if (savedBank) {
-        setQuestionBank(JSON.parse(savedBank));
-      }
-    } catch (error) {
-      console.error("Failed to load question bank from local storage:", error);
-    }
-
     // Load Quiz History
     try {
       const savedHistory = localStorage.getItem('quizHistory');
@@ -146,7 +166,7 @@ const App: React.FC = () => {
         console.error("Failed to load study resources", error);
     }
 
-    const allModules = INITIAL_EXAM_DATA.flatMap(e => e.modules);
+    const allModules = exams.flatMap(e => e.modules);
 
     // Load Module Visibility
     try {
@@ -246,7 +266,8 @@ const App: React.FC = () => {
         setContentPointVisibility(defaultVisibility);
     }
 
-  }, []);
+  }, []); // Run once on mount
+
 
   const updateQuestionBank = useCallback((newBank: QuestionBank) => {
     setQuestionBank(newBank);
@@ -255,25 +276,32 @@ const App: React.FC = () => {
 
 
   // --- CENTRALIZED DATA IMPORT LOGIC ---
+  // Now uses REFS to ensure it always works with the latest data, even inside async/useEffect callbacks
   const processImportedData = useCallback((importedData: any) => {
       try {
+        // Use Refs to get latest state
+        const currentExams = examsRef.current;
+        const currentBank = questionBankRef.current;
+        const currentModuleVis = moduleVisibilityRef.current;
+        const currentSubTopicVis = subTopicVisibilityRef.current;
+        const currentContentPointVis = contentPointVisibilityRef.current;
+
         // Deep copy current state to mutate
-        const updatedExams = JSON.parse(JSON.stringify(exams));
-        const updatedBank = { ...questionBank };
+        const updatedExams = JSON.parse(JSON.stringify(currentExams));
+        const updatedBank = { ...currentBank };
         let modulesAdded = 0;
         let subTopicsAdded = 0;
         
         // Visibility updates
-        let newModuleVis = { ...moduleVisibility };
-        let newSubTopicVis = JSON.parse(JSON.stringify(subTopicVisibility));
-        let newContentPointVis = JSON.parse(JSON.stringify(contentPointVisibility));
+        let newModuleVis = { ...currentModuleVis };
+        let newSubTopicVis = JSON.parse(JSON.stringify(currentSubTopicVis));
+        let newContentPointVis = JSON.parse(JSON.stringify(currentContentPointVis));
 
         const allModules = updatedExams.flatMap((e: Exam) => e.modules);
         let maxModuleId = allModules.reduce((max: number, m: Module) => Math.max(max, m.id), 0);
 
         Object.entries(importedData).forEach(([key, topics]) => {
             // key is Module Title (or legacy ID)
-            // topics is { "SubTopic": [...], "SubTopic::ContentPoint": [...] }
             
             let targetModule: Module | undefined;
 
@@ -287,31 +315,26 @@ const App: React.FC = () => {
             }
 
             // 3. If not found, create new module (Only if we have a valid exam structure loaded)
-            // Note: If importing via file fetch on load, activeExamId might be null. 
-            // We default to the first exam if available, or fail gracefully.
             if (!targetModule && updatedExams.length > 0) {
-                 // Default to adding to the first Exam if activeExamId is unavailable (e.g. on auto-load)
-                 const targetExamId = activeExamId || updatedExams[0].id;
-                 const activeExamIndex = updatedExams.findIndex((e: Exam) => e.id === targetExamId);
+                 // Default to first exam
+                 const activeExamIndex = 0;
                  
-                 if (activeExamIndex !== -1) {
-                     maxModuleId++;
-                     const newModule: Module = {
-                         id: maxModuleId,
-                         title: key.startsWith('ID:') ? `Imported Module ${maxModuleId}` : key,
-                         icon: 'folder', // Default icon
-                         color: 'bg-gray-100 text-gray-600',
-                         subTopics: []
-                     };
-                     updatedExams[activeExamIndex].modules.push(newModule);
-                     targetModule = newModule;
-                     modulesAdded++;
-                     
-                     // Init visibility
-                     newModuleVis[newModule.id] = true;
-                     newSubTopicVis[newModule.id] = {};
-                     newContentPointVis[newModule.id] = {};
-                 }
+                 maxModuleId++;
+                 const newModule: Module = {
+                     id: maxModuleId,
+                     title: key.startsWith('ID:') ? `Imported Module ${maxModuleId}` : key,
+                     icon: 'folder', // Default icon
+                     color: 'bg-gray-100 text-gray-600',
+                     subTopics: []
+                 };
+                 updatedExams[activeExamIndex].modules.push(newModule);
+                 targetModule = newModule;
+                 modulesAdded++;
+                 
+                 // Init visibility
+                 newModuleVis[newModule.id] = true;
+                 newSubTopicVis[newModule.id] = {};
+                 newContentPointVis[newModule.id] = {};
             }
 
             if (targetModule) {
@@ -369,31 +392,48 @@ const App: React.FC = () => {
         console.error("Process Data Error", error);
         throw error;
       }
-  }, [exams, questionBank, activeExamId, updateQuestionBank, moduleVisibility, subTopicVisibility, contentPointVisibility]);
+  }, [updateQuestionBank]);
 
   // --- AUTO-FETCH DATA.JSON ON LOAD ---
-  useEffect(() => {
-      // Only run this check once exams are initialized to avoid overwriting with empty state
-      if (exams.length === 0) return;
-
-      const loadExternalData = async () => {
-          try {
-              // Add timestamp to bypass browser cache
-              const response = await fetch(`data.json?t=${new Date().getTime()}`);
-              if (response.ok) {
-                  const jsonData = await response.json();
-                  console.log("Found data.json, attempting auto-import...");
-                  processImportedData(jsonData);
-                  console.log("Auto-import completed.");
-              }
-          } catch (error) {
-              // Silent fail if file doesn't exist - this is expected for normal users
-              console.debug("No external data.json found or failed to load.");
+  const syncDataFromServer = useCallback(async () => {
+      // Don't sync if no exams loaded yet
+      if (examsRef.current.length === 0) return;
+      
+      setSyncStatus('syncing');
+      try {
+          // Add timestamp to bypass browser cache
+          const response = await fetch(`data.json?t=${new Date().getTime()}`, {
+               cache: 'no-store',
+               headers: {
+                   'Pragma': 'no-cache',
+                   'Cache-Control': 'no-cache'
+               }
+          });
+          
+          if (response.ok) {
+              const jsonData = await response.json();
+              console.log("Found data.json, attempting auto-import...");
+              processImportedData(jsonData);
+              setSyncStatus('synced');
+              console.log("Auto-import completed.");
+          } else {
+              // Silent fail expected if file doesn't exist
+              console.debug("No external data.json found.");
+              setSyncStatus('idle');
           }
-      };
+      } catch (error) {
+          console.error("Sync failed", error);
+          setSyncStatus('error');
+      }
+  }, [processImportedData]);
 
-      loadExternalData();
-  }, [exams.length]); // Run when exams are first loaded
+  // Run sync once on mount (with a slight delay to ensure localStorage load finishes)
+  useEffect(() => {
+      const timer = setTimeout(() => {
+          syncDataFromServer();
+      }, 1000);
+      return () => clearTimeout(timer);
+  }, []); // Run once
 
   // Effect to save exams to local storage whenever they change
   useEffect(() => {
@@ -484,10 +524,6 @@ const App: React.FC = () => {
       setQuizHistory(prev => [attempt, ...prev]);
 
       // --- UNLOCKING LOGIC ---
-      // Requirements: 
-      // 1. Must be in Exam Mode
-      // 2. Must score >= 80%
-      // 3. Must be a full Sub-Topic quiz (not just a content point)
       if (
           activeQuizMode === 'exam' && 
           result.score >= 80 && 
@@ -895,38 +931,23 @@ const App: React.FC = () => {
 
   const handleExportQuestions = useCallback(() => {
     // Transform ID-based bank to Title-based bank for portability
-    // STRUCTURE AWARE EXPORT: Iterates through Exams to preserve structure of empty modules
     const titleBasedBank: Record<string, any> = {};
-    
-    // 1. Iterate through all exams and modules to build the structure
     exams.forEach(exam => {
         exam.modules.forEach(module => {
             const moduleQuestions: Record<string, Question[]> = {};
-            
-            // 1a. Get existing questions from the bank
             if (questionBank[module.id]) {
                 Object.entries(questionBank[module.id]).forEach(([key, val]) => {
                     moduleQuestions[key] = val;
                 });
             }
-            
-            // 1b. Ensure all SubTopics are present as keys, even if they have no questions
+            // Ensure SubTopics are present
             module.subTopics.forEach(st => {
-                // Ensure subtopic key exists
-                if (!moduleQuestions[st.title]) {
-                    moduleQuestions[st.title] = [];
-                }
-                // Ensure content point keys exist
+                if (!moduleQuestions[st.title]) moduleQuestions[st.title] = [];
                 st.content.forEach(cp => {
                     const cpKey = `${st.title}::${cp}`;
-                    if (!moduleQuestions[cpKey]) {
-                        moduleQuestions[cpKey] = [];
-                    }
+                    if (!moduleQuestions[cpKey]) moduleQuestions[cpKey] = [];
                 });
             });
-            
-            // 1c. Add to export object. 
-            // Note: This assumes module titles are unique across exams or we accept merging.
             if (titleBasedBank[module.title]) {
                  titleBasedBank[module.title] = { ...titleBasedBank[module.title], ...moduleQuestions };
             } else {
@@ -935,7 +956,6 @@ const App: React.FC = () => {
         });
     });
     
-    // 2. Catch any orphan data (questions for modules that might have been deleted but persist in bank)
     const allModuleIds = new Set(exams.flatMap(e => e.modules.map(m => m.id)));
     Object.entries(questionBank).forEach(([moduleIdStr, topics]) => {
         const moduleId = parseInt(moduleIdStr);
@@ -957,6 +977,36 @@ const App: React.FC = () => {
     link.download = "cyber-security-question-bank.json";
     link.click();
   }, [questionBank, exams]);
+
+  // --- EXPORT AS SOURCE CODE ---
+  // Generates a downloadable 'constants.ts' file containing all current state
+  const handleExportAsConstantsFile = useCallback(() => {
+     const jsonExams = JSON.stringify(exams, null, 4);
+     const jsonBank = JSON.stringify(questionBank, null, 4);
+     
+     const fileContent = `
+import type { Module, Exam, QuestionBank } from './types';
+
+// This file was auto-generated by the Admin 'Export as Source Code' feature.
+// It contains the complete snapshot of your Exams, Modules, and Question Bank.
+
+export const INITIAL_EXAM_DATA: Exam[] = ${jsonExams};
+
+export const INITIAL_QUESTION_BANK: QuestionBank = ${jsonBank};
+     `.trim();
+
+    const blob = new Blob([fileContent], { type: 'text/typescript' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'constants.ts';
+    link.click();
+    URL.revokeObjectURL(url);
+
+    alert("Download started: constants.ts\n\nPlease replace the existing 'constants.ts' file in your source code folder with this new file to make your changes permanent.");
+
+  }, [exams, questionBank]);
+
 
   const handleImportQuestions = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1066,7 +1116,6 @@ const App: React.FC = () => {
 
   // Unlock Code Handler
   const handleUnlockAllContent = useCallback((code: string) => {
-    // Allow 'dqadm' OR 'adm' to be user-friendly
     if (code === 'dqadm' || code === 'adm') {
         const allModIds: number[] = [];
         const allSubKeys: string[] = [];
@@ -1081,15 +1130,10 @@ const App: React.FC = () => {
         });
         
         if (allModIds.length === 0) return;
-
-        // Check if all modules are currently unlocked (checking length matching)
-        // A more robust check would be every(id => unlockedModules.includes(id))
         const isFullyUnlocked = allModIds.every(id => unlockedModules.includes(id));
 
         if (isFullyUnlocked) {
-            // TOGGLE OFF: Reset to default (First module/subtopic only)
-            
-            // Default logic: Unlock 1st of 1st
+            // Reset to default
             const defaultModIds: number[] = [];
             const defaultSubKeys: string[] = [];
             
@@ -1107,10 +1151,9 @@ const App: React.FC = () => {
             alert("🔒 Modules have been LOCKED (Reset to default).");
 
         } else {
-            // TOGGLE ON: Unlock everything
+            // Unlock everything
             setUnlockedModules(allModIds);
             setUnlockedSubTopics(allSubKeys);
-            // Force explicit save to localStorage immediately to prevent refresh issues
             localStorage.setItem('unlockedModules', JSON.stringify(allModIds));
             localStorage.setItem('unlockedSubTopics', JSON.stringify(allSubKeys));
             alert("🔓 Success! All modules and sub-topics have been UNLOCKED.");
@@ -1203,6 +1246,8 @@ const App: React.FC = () => {
                   unlockedModules={unlockedModules}
                   unlockedSubTopics={unlockedSubTopics}
                   onUnlockCode={handleUnlockAllContent}
+                  syncStatus={syncStatus}
+                  onManualSync={syncDataFromServer}
                 />;
         }
         // Fallback to home if no active exam
@@ -1229,6 +1274,23 @@ const App: React.FC = () => {
       <div className="flex-grow flex items-center justify-center w-full">
         {renderContent()}
       </div>
+      
+      {/* Admin Tools Overlay */}
+      {isAdmin && (
+        <div className="fixed bottom-4 right-4 bg-white p-4 rounded-lg shadow-xl border border-gray-300 z-50">
+            <p className="text-xs font-bold text-gray-500 mb-2 uppercase">Developer Tools</p>
+            <button 
+                onClick={handleExportAsConstantsFile}
+                className="w-full flex items-center gap-2 px-3 py-2 bg-gray-800 text-white text-sm rounded hover:bg-gray-900 transition-colors"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                </svg>
+                Download constants.ts
+            </button>
+        </div>
+      )}
+
       <Footer />
       {isLoginModalOpen && <LoginView onLogin={handleAdminLogin} onClose={() => setLoginModalOpen(false)} />}
       {quizSettings.isOpen && quizSettings.module && (
