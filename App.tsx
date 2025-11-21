@@ -406,10 +406,6 @@ const App: React.FC = () => {
   const handleClearProgress = useCallback(() => {
     if (window.confirm("Are you sure you want to clear all your progress? This action cannot be undone.")) {
       setQuizHistory([]);
-      // Optionally reset locks here?
-      // localStorage.removeItem('unlockedModules');
-      // localStorage.removeItem('unlockedSubTopics');
-      // window.location.reload();
     }
   }, []);
   
@@ -1025,7 +1021,8 @@ const App: React.FC = () => {
 
   // Unlock Code Handler
   const handleUnlockAllContent = useCallback((code: string) => {
-    if (code === 'dqadm') {
+    // Allow 'dqadm' OR 'adm' to be user-friendly
+    if (code === 'dqadm' || code === 'adm') {
         const allModIds: number[] = [];
         const allSubKeys: string[] = [];
 
@@ -1037,15 +1034,47 @@ const App: React.FC = () => {
                 });
             });
         });
+        
+        if (allModIds.length === 0) return;
 
-        setUnlockedModules(allModIds);
-        setUnlockedSubTopics(allSubKeys);
-        // Persistence handled by useEffect
-        alert("🔓 All modules and sub-topics unlocked successfully!");
+        // Check if all modules are currently unlocked (checking length matching)
+        // A more robust check would be every(id => unlockedModules.includes(id))
+        const isFullyUnlocked = allModIds.every(id => unlockedModules.includes(id));
+
+        if (isFullyUnlocked) {
+            // TOGGLE OFF: Reset to default (First module/subtopic only)
+            
+            // Default logic: Unlock 1st of 1st
+            const defaultModIds: number[] = [];
+            const defaultSubKeys: string[] = [];
+            
+            if (exams.length > 0 && exams[0].modules.length > 0) {
+                defaultModIds.push(exams[0].modules[0].id);
+                if (exams[0].modules[0].subTopics.length > 0) {
+                    defaultSubKeys.push(getSubTopicLockKey(exams[0].modules[0].id, exams[0].modules[0].subTopics[0].title));
+                }
+            }
+            
+            setUnlockedModules(defaultModIds);
+            setUnlockedSubTopics(defaultSubKeys);
+            localStorage.setItem('unlockedModules', JSON.stringify(defaultModIds));
+            localStorage.setItem('unlockedSubTopics', JSON.stringify(defaultSubKeys));
+            alert("🔒 Modules have been LOCKED (Reset to default).");
+
+        } else {
+            // TOGGLE ON: Unlock everything
+            setUnlockedModules(allModIds);
+            setUnlockedSubTopics(allSubKeys);
+            // Force explicit save to localStorage immediately to prevent refresh issues
+            localStorage.setItem('unlockedModules', JSON.stringify(allModIds));
+            localStorage.setItem('unlockedSubTopics', JSON.stringify(allSubKeys));
+            alert("🔓 Success! All modules and sub-topics have been UNLOCKED.");
+        }
+
     } else {
-        alert("Invalid unlock code.");
+        alert("Invalid unlock code. Try 'dqadm' or 'adm'.");
     }
-  }, [exams]);
+  }, [exams, unlockedModules]);
 
   const activeExam = useMemo(() => exams.find(e => e.id === activeExamId), [exams, activeExamId]);
 
