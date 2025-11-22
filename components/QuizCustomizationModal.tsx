@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Icon from './Icon';
 
@@ -43,6 +44,15 @@ const QuizCustomizationModal: React.FC<QuizCustomizationModalProps> = ({
     }
   }, [isOpen, maxQuestions]);
 
+  // Enforce strict rules for Exam Mode
+  useEffect(() => {
+    if (mode === 'exam') {
+        setNumQuestions(maxQuestions);
+        setQuizType('custom');
+        setError('');
+    }
+  }, [mode, maxQuestions]);
+
   const handleNumChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     if (val === '') {
@@ -58,6 +68,11 @@ const QuizCustomizationModal: React.FC<QuizCustomizationModalProps> = ({
       setError('');
     }
     setNumQuestions(num);
+  };
+
+  const handleSetMax = () => {
+      setNumQuestions(maxQuestions);
+      setError('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -96,13 +111,16 @@ const QuizCustomizationModal: React.FC<QuizCustomizationModalProps> = ({
         <div className="flex p-1 bg-gray-100 rounded-lg mb-6">
             <button 
                 onClick={() => setQuizType('custom')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${quizType === 'custom' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                disabled={mode === 'exam'}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${quizType === 'custom' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'} ${mode === 'exam' ? 'opacity-100 cursor-not-allowed' : ''}`}
             >
                 Custom Quiz
             </button>
             <button 
                 onClick={() => setQuizType('daily')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${quizType === 'daily' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                disabled={mode === 'exam'}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${quizType === 'daily' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'} ${mode === 'exam' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title={mode === 'exam' ? "Daily Challenge not available in Exam Mode" : ""}
             >
                 Daily Challenge
             </button>
@@ -120,16 +138,31 @@ const QuizCustomizationModal: React.FC<QuizCustomizationModalProps> = ({
                     <p className="text-xs text-gray-500 mb-2">
                         Total available: {maxQuestions}
                     </p>
-                    <input
-                        type="number"
-                        id="numQuestions"
-                        value={numQuestions}
-                        onChange={handleNumChange}
-                        min="1"
-                        max={maxQuestions}
-                        className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                        autoFocus
-                    />
+                    <div className="flex gap-2">
+                        <input
+                            type="number"
+                            id="numQuestions"
+                            value={numQuestions}
+                            onChange={handleNumChange}
+                            min="1"
+                            max={maxQuestions}
+                            disabled={mode === 'exam'}
+                            className={`flex-grow block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${mode === 'exam' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+                        />
+                        <button 
+                            type="button"
+                            onClick={handleSetMax}
+                            disabled={mode === 'exam'}
+                            className={`px-3 py-2 text-gray-700 text-sm font-medium rounded-md transition-colors ${mode === 'exam' ? 'bg-gray-200 opacity-50 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300'}`}
+                        >
+                            Max ({maxQuestions})
+                        </button>
+                    </div>
+                    {mode === 'exam' && (
+                        <p className="text-xs text-indigo-600 mt-1 font-medium">
+                            Exam Mode requires taking all questions.
+                        </p>
+                    )}
                     {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
                 </div>
             ) : (
@@ -212,7 +245,7 @@ const QuizCustomizationModal: React.FC<QuizCustomizationModalProps> = ({
                 type="submit" 
                 disabled={quizType === 'custom' && (!!error || numQuestions === 0 || isNaN(numQuestions))}
                 className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
-              Start {quizType === 'daily' ? `Day ${selectedDay}` : 'Quiz'}
+              Start {mode === 'exam' ? 'Exam' : (quizType === 'daily' ? `Day ${selectedDay}` : 'Quiz')}
             </button>
           </div>
         </form>

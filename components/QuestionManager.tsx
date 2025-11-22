@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import type { Module, Question, DifficultyLevel } from '../types';
 import QuestionForm from './QuestionForm';
@@ -66,18 +67,18 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ module, subTopic, con
   const handleBulkGenerate = async () => {
     setIsGenerating(true);
     try {
-        const p1 = onGenerateAI(10, 'Low');
-        const p2 = onGenerateAI(10, 'Medium');
-        const p3 = onGenerateAI(10, 'Advanced');
+        // Run sequentially to avoid hitting API rate limits
+        const r1 = await onGenerateAI(10, 'Low');
+        const r2 = await onGenerateAI(10, 'Medium');
+        const r3 = await onGenerateAI(10, 'Advanced');
         
-        const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
         const newQs = [...r1, ...r2, ...r3];
         
         setQuestions(prev => [...prev, ...newQs]);
         alert(`Successfully generated 30 questions (10 Low, 10 Medium, 10 Advanced)!`);
     } catch (error) {
         console.error("Bulk generation error", error);
-        alert("Error generating bulk questions. Ensure your API key is valid and try again.");
+        alert("Error generating bulk questions. The API rate limit may have been reached. Please try generating fewer questions manually.");
     } finally {
         setIsGenerating(false);
     }

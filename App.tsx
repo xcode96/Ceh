@@ -1072,11 +1072,12 @@ export const INITIAL_QUESTION_BANK: QuestionBank = ${jsonBank};
             importedQuestions[0].correctAnswer
         ))) {
             const topicIdentifier = getTopicIdentifier(subTopic, contentPoint);
-            const newBank = { ...questionBank };
+            const newBank: any = { ...questionBank };
             if (!newBank[module.id]) {
                 newBank[module.id] = {};
             }
-            newBank[module.id][topicIdentifier] = importedQuestions as Question[];
+            // Explicitly cast to unknown then Question[] to avoid type errors
+            newBank[module.id][topicIdentifier] = importedQuestions as unknown as Question[];
             updateQuestionBank(newBank);
             alert(`Successfully imported ${importedQuestions.length} questions for ${contentPoint || subTopic}.`);
         } else {
