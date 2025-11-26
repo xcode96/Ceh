@@ -4,7 +4,7 @@ An advanced, AI-powered interactive web application designed to help professiona
 
 This platform utilizes **Google's Gemini AI** to dynamically generate questions, explain complex concepts, and categorize content, providing an infinite resource for study materials.
 
-----
+---
 
 ## 🚀 Key Features
 

@@ -1,4 +1,3 @@
-
 import React, { useRef, useMemo, useState } from 'react';
 import ModuleListItem from './ModuleListItem';
 import Icon from './Icon';
@@ -19,6 +18,7 @@ interface DashboardProps {
   onExportTopic: (module: Module, subTopic: string, contentPoint?: string) => void;
   onImportTopic: (event: React.ChangeEvent<HTMLInputElement>, module: Module, subTopic: string, contentPoint?: string) => void;
   onExportSourceCode: () => void;
+  onDownloadProject: () => void;
   moduleVisibility: { [moduleId: number]: boolean };
   onToggleModuleVisibility: (moduleId: number) => void;
   subTopicVisibility: { [moduleId: number]: { [subTopic: string]: boolean } };
@@ -27,8 +27,10 @@ interface DashboardProps {
   onToggleContentPointVisibility: (moduleId: number, subTopic: string, contentPoint: string) => void;
   onAddModule: (title: string) => void;
   onEditModule: (moduleId: number, newTitle: string) => void;
+  onDeleteModule: (moduleId: number) => void;
   onAddSubTopic: (moduleId: number, subTopic: string) => void;
   onEditSubTopic: (moduleId: number, oldSubTopic: string, newSubTopic: string) => void;
+  onDeleteSubTopic: (moduleId: number, subTopic: string) => void;
   questionBank: QuestionBank;
   onReturnToHome: () => void;
   onGenerateModuleAI: (module: Module) => void;
@@ -44,11 +46,11 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ 
   examTitle, modules, onConfigureQuiz, onViewProgress, onViewLearningHub,
   isAdmin, onAdminLoginClick, onLogout, onManageQuestions, 
-  onExportQuestions, onImportQuestions, onExportTopic, onImportTopic, onExportSourceCode,
+  onExportQuestions, onImportQuestions, onExportTopic, onImportTopic, onExportSourceCode, onDownloadProject,
   moduleVisibility, onToggleModuleVisibility,
   subTopicVisibility, onToggleSubTopicVisibility,
   contentPointVisibility, onToggleContentPointVisibility,
-  onAddModule, onEditModule, onAddSubTopic, onEditSubTopic, questionBank, onReturnToHome,
+  onAddModule, onEditModule, onDeleteModule, onAddSubTopic, onEditSubTopic, onDeleteSubTopic, questionBank, onReturnToHome,
   onGenerateModuleAI, generatingModuleId, generatingStatus,
   unlockedModules, unlockedSubTopics, onUnlockCode, syncStatus, onManualSync
 }) => {
@@ -153,6 +155,10 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <Icon iconName="code-bracket" className="h-4 w-4"/>
                         Download Source
                     </button>
+                    <button onClick={onDownloadProject} className="w-full py-2.5 px-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors duration-300 flex items-center justify-center gap-2 text-sm" title="Download entire project source code as ZIP">
+                        <Icon iconName="folder-open" className="h-4 w-4"/>
+                        Download Project (ZIP)
+                    </button>
                 </>
                 )}
             </div>
@@ -232,6 +238,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               isAdmin={isAdmin}
               onManage={(subTopic, contentPoint) => onManageQuestions(module, subTopic, contentPoint)}
               onEdit={(newTitle) => onEditModule(module.id, newTitle)}
+              onDelete={() => onDeleteModule(module.id)}
               onExport={(subTopic, contentPoint) => onExportTopic(module, subTopic, contentPoint)}
               onImport={(event, subTopic, contentPoint) => onImportTopic(event, module, subTopic, contentPoint)}
               isVisible={moduleVisibility[module.id]}
@@ -242,6 +249,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               onToggleContentPointVisibility={(subTopic, contentPoint) => onToggleContentPointVisibility(module.id, subTopic, contentPoint)}
               onAddSubTopic={(subTopic) => onAddSubTopic(module.id, subTopic)}
               onEditSubTopic={(oldSubTopic, newSubTopic) => onEditSubTopic(module.id, oldSubTopic, newSubTopic)}
+              onDeleteSubTopic={(subTopic) => onDeleteSubTopic(module.id, subTopic)}
               onGenerateAI={() => onGenerateModuleAI(module)}
               isGenerating={generatingModuleId === module.id}
               generatingStatus={generatingStatus}

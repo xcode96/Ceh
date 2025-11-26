@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import Dashboard from './components/Dashboard';
 import QuizView from './components/QuizView';
@@ -13,6 +12,7 @@ import LearningHub from './components/LearningHub';
 import { INITIAL_EXAM_DATA, INITIAL_QUESTION_BANK } from './constants';
 import { generateQuestionsForModule } from './services/geminiService';
 import type { Module, QuestionBank, Question, Exam, SubTopic, QuizResult, QuizAttempt, DifficultyLevel, StudyResource } from './types';
+import JSZip from 'jszip';
 
 type View = 'dashboard' | 'quiz' | 'results' | 'progress' | 'home' | 'learning-hub';
 
@@ -219,7 +219,7 @@ const App: React.FC = () => {
             setUnlockedModules(JSON.parse(savedUnlockedModules));
         } else {
              // Unlock first module of EACH exam by default
-            const initialUnlockedModules = INITIAL_EXAM_DATA.map(exam => exam.modules[0].id);
+            const initialUnlockedModules = INITIAL_EXAM_DATA.map(exam => exam.modules[0]?.id).filter(id => id !== undefined);
             setUnlockedModules(initialUnlockedModules);
         }
 
@@ -675,6 +675,17 @@ const App: React.FC = () => {
         );
     }, []);
 
+    const handleDeleteModule = useCallback((moduleId: number) => {
+        if (!window.confirm("Are you sure you want to delete this module? This action cannot be undone.")) return;
+        
+        setExams(prevExams => 
+            prevExams.map(exam => ({
+                ...exam,
+                modules: exam.modules.filter(module => module.id !== moduleId)
+            }))
+        );
+    }, []);
+
     const handleAddSubTopic = useCallback((moduleId: number, subTopicTitle: string) => {
         if (!subTopicTitle || subTopicTitle.trim() === '') return;
         const trimmedTitle = subTopicTitle.trim();
@@ -786,6 +797,25 @@ const App: React.FC = () => {
 
     }, []);
 
+    const handleDeleteSubTopic = useCallback((moduleId: number, subTopicTitle: string) => {
+        if (!window.confirm("Are you sure you want to delete this sub-topic?")) return;
+
+        setExams(prevExams =>
+            prevExams.map(exam => ({
+                ...exam,
+                modules: exam.modules.map(module => {
+                    if (module.id === moduleId) {
+                        return {
+                            ...module,
+                            subTopics: module.subTopics.filter(st => st.title !== subTopicTitle)
+                        };
+                    }
+                    return module;
+                })
+            }))
+        );
+    }, []);
+
     const handleAddExam = useCallback((title: string, description: string) => {
         if (!title.trim() || !description.trim()) return;
         setExams(prevExams => {
@@ -798,6 +828,11 @@ const App: React.FC = () => {
             };
             return [...prevExams, newExam];
         });
+    }, []);
+
+    const handleDeleteExam = useCallback((examId: number) => {
+        if (!window.confirm("Are you sure you want to delete this entire Exam Folder? This will remove all contained modules and questions.")) return;
+        setExams(prevExams => prevExams.filter(e => e.id !== examId));
     }, []);
 
   const handleExportQuestions = useCallback(() => {
@@ -855,6 +890,56 @@ export const INITIAL_QUESTION_BANK: QuestionBank = ${JSON.stringify(currentBank,
       link.download = 'constants.ts';
       link.click();
       URL.revokeObjectURL(url);
+  }, []);
+
+  const handleDownloadProject = useCallback(async () => {
+      const zip = new JSZip();
+      const currentExams = examsRef.current;
+      const currentBank = questionBankRef.current;
+
+      // Create updated constants.ts from current state
+      const constantsContent = `import type { Module, Exam, QuestionBank } from './types';\n\nexport const INITIAL_EXAM_DATA: Exam[] = ${JSON.stringify(currentExams, null, 4)};\n\nexport const INITIAL_QUESTION_BANK: QuestionBank = ${JSON.stringify(currentBank, null, 4)};`;
+      zip.file('constants.ts', constantsContent);
+
+      // Files to attempt to fetch and add to zip
+      const files = [
+          'index.html', 'index.tsx', 'App.tsx', 'types.ts',
+          'services/geminiService.ts',
+          'components/Dashboard.tsx', 
+          'components/Footer.tsx',
+          'components/Home.tsx',
+          'components/Icon.tsx',
+          'components/LearningHub.tsx',
+          'components/LoginView.tsx',
+          'components/ModuleListItem.tsx',
+          'components/ProgressCircle.tsx',
+          'components/ProgressView.tsx',
+          'components/QuestionForm.tsx',
+          'components/QuestionManager.tsx',
+          'components/QuizCompletedView.tsx',
+          'components/QuizCustomizationModal.tsx',
+          'components/QuizResultsView.tsx',
+          'components/QuizView.tsx'
+      ];
+
+      for (const file of files) {
+          try {
+              const res = await fetch(`/${file}`);
+              if (res.ok) {
+                  const text = await res.text();
+                  zip.file(file, text);
+              }
+          } catch (e) {
+              console.warn(`Could not add ${file} to zip`, e);
+          }
+      }
+
+      // Generate zip
+      const content = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(content);
+      link.download = "cybersecurity-platform-project.zip";
+      link.click();
   }, []);
 
   const processImportedData = useCallback((importedData: any) => {
@@ -1222,6 +1307,7 @@ export const INITIAL_QUESTION_BANK: QuestionBank = ${JSON.stringify(currentBank,
                   onExportTopic={handleExportTopic}
                   onImportTopic={handleImportTopic}
                   onExportSourceCode={handleExportSourceCode}
+                  onDownloadProject={handleDownloadProject}
                   moduleVisibility={moduleVisibility}
                   onToggleModuleVisibility={handleToggleModuleVisibility}
                   subTopicVisibility={subTopicVisibility}
@@ -1230,8 +1316,10 @@ export const INITIAL_QUESTION_BANK: QuestionBank = ${JSON.stringify(currentBank,
                   onToggleContentPointVisibility={handleToggleContentPointVisibility}
                   onAddModule={handleAddModule}
                   onEditModule={handleEditModule}
+                  onDeleteModule={handleDeleteModule}
                   onAddSubTopic={handleAddSubTopic}
                   onEditSubTopic={handleEditSubTopic}
+                  onDeleteSubTopic={handleDeleteSubTopic}
                   questionBank={questionBank}
                   onReturnToHome={handleReturnToHome}
                   onGenerateModuleAI={handleGenerateModuleQuestions}
@@ -1256,6 +1344,7 @@ export const INITIAL_QUESTION_BANK: QuestionBank = ${JSON.stringify(currentBank,
             onSelectExam={handleSelectExam}
             isAdmin={isAdmin}
             onAddExam={handleAddExam}
+            onDeleteExam={handleDeleteExam}
             onAdminLoginClick={() => setLoginModalOpen(true)}
             onLogout={handleLogout}
             onViewLearningHub={handleViewLearningHub}

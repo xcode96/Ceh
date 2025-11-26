@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useMemo } from 'react';
 import Icon from './Icon';
 import type { Module, QuestionBank, SubTopic, Question } from '../types';
@@ -10,6 +9,7 @@ interface ModuleListItemProps {
   isAdmin: boolean;
   onManage: (subTopic: string, contentPoint?: string) => void;
   onEdit: (newTitle: string) => void;
+  onDelete: () => void;
   onExport: (subTopic: string, contentPoint?: string) => void;
   onImport: (event: React.ChangeEvent<HTMLInputElement>, subTopic: string, contentPoint?: string) => void;
   isVisible: boolean;
@@ -20,6 +20,7 @@ interface ModuleListItemProps {
   onToggleContentPointVisibility: (subTopic: string, contentPoint: string) => void;
   onAddSubTopic: (subTopic: string) => void;
   onEditSubTopic: (oldSubTopic: string, newSubTopic: string) => void;
+  onDeleteSubTopic: (subTopic: string) => void;
   onGenerateAI?: () => void;
   isGenerating?: boolean;
   generatingStatus?: string;
@@ -111,6 +112,7 @@ interface SubTopicItemProps {
   onConfigureContentPointQuiz: (contentPoint: string) => void;
   onManage: (subTopic: string, contentPoint?: string) => void;
   onEdit: (newTitle: string) => void;
+  onDelete: () => void;
   onExport: (subTopic: string, contentPoint?: string) => void;
   onImport: (event: React.ChangeEvent<HTMLInputElement>, subTopic: string, contentPoint?: string) => void;
   isVisible: boolean;
@@ -122,7 +124,7 @@ interface SubTopicItemProps {
 
 const SubTopicItem: React.FC<SubTopicItemProps> = ({ 
     topic, isAdmin, questionCount, contentPointQuestionCounts, onConfigureSubTopicQuiz, onConfigureContentPointQuiz, onManage, 
-    onEdit, onExport, onImport, isVisible, onToggleVisibility, 
+    onEdit, onDelete, onExport, onImport, isVisible, onToggleVisibility, 
     contentPointVisibility, onToggleContentPointVisibility, isLocked 
 }) => {
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -140,6 +142,11 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
     }
   };
 
+  const handleDelete = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onDelete();
+  }
+
   return (
     <li className={`flex flex-col rounded-md transition-all duration-200 group ${isAdmin && !isVisible ? 'opacity-40' : ''} ${isLocked && !isAdmin ? 'bg-gray-50' : ''}`}>
       <div className={`flex flex-col sm:flex-row sm:items-start justify-between py-2 px-2 rounded-md gap-2 sm:gap-0`}>
@@ -151,9 +158,14 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
               <div className="flex items-center gap-1 flex-wrap">
                 <span className={`text-sm font-semibold break-words ${isLocked && !isAdmin ? 'text-gray-500' : 'text-gray-800'}`}>{topic.title}</span>
                 {isAdmin && (
-                    <button onClick={handleEdit} title="Edit sub-topic name" className="p-1 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Icon iconName="edit" className="h-3 w-3" />
-                    </button>
+                    <>
+                        <button onClick={handleEdit} title="Edit sub-topic name" className="p-1 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Icon iconName="edit" className="h-3 w-3" />
+                        </button>
+                        <button onClick={handleDelete} title="Delete sub-topic" className="p-1 rounded-full text-gray-500 hover:bg-red-100 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                    </>
                 )}
               </div>
               {!isAdmin && questionCount > 0 && (
@@ -242,10 +254,10 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
 
 
 const ModuleListItem: React.FC<ModuleListItemProps> = ({ 
-    module, questionBank, onConfigure, isAdmin, onManage, onEdit, onExport, onImport, isVisible, 
+    module, questionBank, onConfigure, isAdmin, onManage, onEdit, onDelete, onExport, onImport, isVisible, 
     onToggleVisibility, subTopicVisibility, onToggleSubTopicVisibility, 
     contentPointVisibility, onToggleContentPointVisibility,
-    onAddSubTopic, onEditSubTopic, onGenerateAI, isGenerating, generatingStatus,
+    onAddSubTopic, onEditSubTopic, onDeleteSubTopic, onGenerateAI, isGenerating, generatingStatus,
     isLocked, unlockedSubTopics
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -276,6 +288,11 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
       if (newTitle) {
           onEdit(newTitle);
       }
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onDelete();
   };
 
   const getStatusBadge = () => {
@@ -359,13 +376,22 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
             <div className="flex items-center gap-2">
               <h3 className={`font-bold truncate ${isLocked && !isAdmin ? 'text-gray-500' : 'text-gray-900'}`}>{module.title}</h3>
               {isAdmin && (
-                <button
-                  onClick={handleEditClick}
-                  title="Edit module title"
-                  className="p-1 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 flex-shrink-0"
-                >
-                  <Icon iconName="edit" className="h-4 w-4" />
-                </button>
+                <>
+                    <button
+                    onClick={handleEditClick}
+                    title="Edit module title"
+                    className="p-1 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 flex-shrink-0"
+                    >
+                        <Icon iconName="edit" className="h-4 w-4" />
+                    </button>
+                    <button
+                    onClick={handleDeleteClick}
+                    title="Delete module"
+                    className="p-1 rounded-full text-gray-500 hover:bg-red-100 hover:text-red-600 flex-shrink-0"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                </>
               )}
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm text-gray-600">
@@ -421,6 +447,7 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
                           onConfigureContentPointQuiz={(contentPoint) => onConfigure(topic.title, contentPoint)}
                           onManage={onManage}
                           onEdit={(newTopicTitle) => onEditSubTopic(topic.title, newTopicTitle)}
+                          onDelete={() => onDeleteSubTopic(topic.title)}
                           onExport={onExport}
                           onImport={onImport}
                           isVisible={subTopicVisibility[topic.title] ?? true}

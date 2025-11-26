@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { Exam } from '../types';
 import Icon from './Icon';
@@ -8,14 +7,24 @@ interface HomeProps {
   onSelectExam: (examId: number) => void;
   isAdmin: boolean;
   onAddExam: (title: string, description: string) => void;
+  onDeleteExam: (examId: number) => void;
   onAdminLoginClick: () => void;
   onLogout: () => void;
   onViewLearningHub: () => void;
 }
 
-const ExamCard: React.FC<{exam: Exam, onSelect: () => void}> = ({ exam, onSelect }) => (
-    <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 p-6 flex flex-col border border-gray-200 hover:border-gray-300">
-        <h3 className="text-xl font-bold text-gray-900">{exam.title}</h3>
+const ExamCard: React.FC<{exam: Exam, onSelect: () => void, isAdmin: boolean, onDelete: (e: React.MouseEvent) => void}> = ({ exam, onSelect, isAdmin, onDelete }) => (
+    <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 p-6 flex flex-col border border-gray-200 hover:border-gray-300 relative group">
+        {isAdmin && (
+            <button 
+                onClick={onDelete} 
+                className="absolute top-4 right-4 p-2 rounded-full bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Delete Exam Folder"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
+        )}
+        <h3 className="text-xl font-bold text-gray-900 pr-8">{exam.title}</h3>
         <p className="text-gray-600 mt-2 flex-grow">{exam.description}</p>
         <p className="text-sm text-gray-500 mt-4">{exam.modules.length} modules</p>
         <button onClick={onSelect} className="mt-4 w-full py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
@@ -25,7 +34,7 @@ const ExamCard: React.FC<{exam: Exam, onSelect: () => void}> = ({ exam, onSelect
 );
 
 
-const Home: React.FC<HomeProps> = ({ exams, onSelectExam, isAdmin, onAddExam, onAdminLoginClick, onLogout, onViewLearningHub }) => {
+const Home: React.FC<HomeProps> = ({ exams, onSelectExam, isAdmin, onAddExam, onDeleteExam, onAdminLoginClick, onLogout, onViewLearningHub }) => {
     
     const handleAddExamClick = () => {
         const title = window.prompt("Enter the title for the new exam folder:");
@@ -57,7 +66,13 @@ const Home: React.FC<HomeProps> = ({ exams, onSelectExam, isAdmin, onAddExam, on
             </header>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {exams.map(exam => (
-                    <ExamCard key={exam.id} exam={exam} onSelect={() => onSelectExam(exam.id)} />
+                    <ExamCard 
+                        key={exam.id} 
+                        exam={exam} 
+                        onSelect={() => onSelectExam(exam.id)} 
+                        isAdmin={isAdmin}
+                        onDelete={(e) => { e.stopPropagation(); onDeleteExam(exam.id); }}
+                    />
                 ))}
                  {isAdmin && (
                     <button onClick={handleAddExamClick} className="w-full h-full p-6 border-2 border-dashed border-gray-300 text-gray-500 font-semibold rounded-xl hover:bg-gray-50 transition-colors duration-300 flex flex-col justify-center items-center min-h-[200px]">
