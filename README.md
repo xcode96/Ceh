@@ -7,7 +7,7 @@ This platform utilizes **Google's Gemini AI** to dynamically generate questions,
 ---
 
 ## 🚀 Key Features
-
+c
 ### 👨‍🎓 For Learners
 *   **Multi-Certification Support**: Pre-loaded structure for CEH v13 and CISSP, with the ability to add custom exams.
 *   **Granular Learning**: Drill down from Exam -> Module -> Sub-Topic -> Content Point.
