@@ -42,61 +42,59 @@ interface ContentPointItemProps {
 }
 
 const ContentPointItem: React.FC<ContentPointItemProps> = ({ item, isAdmin, questionCount, onConfigureQuiz, isVisible, onToggleVisibility, onManage, onExport, onImport, isLocked }) => {
-    const importInputRef = useRef<HTMLInputElement>(null);
-    const handleImportClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        importInputRef.current?.click();
-    };
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const handleImportClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    importInputRef.current?.click();
+  };
 
   return (
-    <li className={`text-sm text-gray-600 py-1.5 list-disc list-inside flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 group ${isAdmin && !isVisible ? 'opacity-40' : ''}`}>
+    <li className={`text-sm text-gray-400 py-1.5 list-disc list-inside flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 group ${isAdmin && !isVisible ? 'opacity-40' : ''}`}>
       <div className="flex items-center gap-2 overflow-hidden">
-        <span className={`truncate ${isLocked && !isAdmin ? 'text-gray-400' : ''}`}>{item}</span>
+        <span className={`truncate ${isLocked && !isAdmin ? 'text-gray-600' : 'text-gray-300'}`}>{item}</span>
         {!isAdmin && questionCount > 0 && (
-            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${isLocked ? 'text-gray-400 bg-gray-100' : 'text-sky-700 bg-sky-100'}`}>
-                {questionCount}
-            </span>
+          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${isLocked ? 'text-gray-500 bg-gray-800' : 'text-sky-300 bg-sky-900/40 border border-sky-500/30'}`}>
+            {questionCount}
+          </span>
         )}
       </div>
       <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-auto sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
         {isAdmin ? (
-            <>
-              <button
-                  onClick={(e) => { e.stopPropagation(); onToggleVisibility(); }}
-                  title={isVisible ? 'Hide topic' : 'Show topic'}
-                  className="p-1 text-gray-500 hover:text-gray-800"
-              >
-                  <Icon iconName={isVisible ? 'eye' : 'eye-slash'} className="h-4 w-4" />
-              </button>
-              <input
-                  type="file" ref={importInputRef} className="hidden" accept=".json"
-                  onChange={(e) => onImport(e)}
-              />
-              <button onClick={handleImportClick} title={`Import questions for ${item}`} className="p-1 text-gray-500 hover:text-sky-600">
-                  <Icon iconName="upload" className="h-4 w-4" />
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); onExport(); }} title={`Export questions for ${item}`} className="p-1 text-gray-500 hover:text-pink-600">
-                  <Icon iconName="download" className="h-4 w-4" />
-              </button>
-              <button 
-                  onClick={(e) => { e.stopPropagation(); onManage(); }}
-                  className="px-2 py-0.5 text-xs font-semibold text-purple-700 bg-purple-100 rounded-full hover:bg-purple-200"
-                  aria-label={`Manage questions for ${item}`}
-              >
-                  Manage
-              </button>
-            </>
+          <>
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleVisibility(); }}
+              title={isVisible ? 'Hide topic' : 'Show topic'}
+              className="p-1 text-gray-500 hover:text-white"
+            >
+              <Icon iconName={isVisible ? 'eye' : 'eye-slash'} className="h-4 w-4" />
+            </button>
+            <input
+              type="file" ref={importInputRef} className="hidden" accept=".json"
+              onChange={(e) => onImport(e)}
+            />
+            <button onClick={handleImportClick} title={`Import questions for ${item}`} className="p-1 text-gray-500 hover:text-sky-400">
+              <Icon iconName="upload" className="h-4 w-4" />
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); onExport(); }} title={`Export questions for ${item}`} className="p-1 text-gray-500 hover:text-pink-400">
+              <Icon iconName="download" className="h-4 w-4" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onManage(); }}
+              className="px-2 py-0.5 text-xs font-semibold text-purple-300 bg-purple-900/40 border border-purple-500/30 rounded-full hover:bg-purple-900/60"
+            >
+              Manage
+            </button>
+          </>
         ) : (
-            !isLocked && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onConfigureQuiz(); }}
-                disabled={questionCount === 0}
-                className="px-2 py-0.5 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-full hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed"
-                aria-label={`Start quiz for ${item}`}
-              >
-                {questionCount > 0 ? 'Quiz' : 'No Qs'}
-              </button>
-            )
+          !isLocked && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onConfigureQuiz(); }}
+              disabled={questionCount === 0}
+              className="px-2 py-0.5 text-xs font-semibold text-indigo-300 bg-indigo-900/40 border border-indigo-500/30 rounded-full hover:bg-indigo-900/60 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed"
+            >
+              {questionCount > 0 ? 'Quiz' : 'No Qs'}
+            </button>
+          )
         )}
       </div>
     </li>
@@ -122,10 +120,10 @@ interface SubTopicItemProps {
   isLocked?: boolean;
 }
 
-const SubTopicItem: React.FC<SubTopicItemProps> = ({ 
-    topic, isAdmin, questionCount, contentPointQuestionCounts, onConfigureSubTopicQuiz, onConfigureContentPointQuiz, onManage, 
-    onEdit, onDelete, onExport, onImport, isVisible, onToggleVisibility, 
-    contentPointVisibility, onToggleContentPointVisibility, isLocked 
+const SubTopicItem: React.FC<SubTopicItemProps> = ({
+  topic, isAdmin, questionCount, contentPointQuestionCounts, onConfigureSubTopicQuiz, onConfigureContentPointQuiz, onManage,
+  onEdit, onDelete, onExport, onImport, isVisible, onToggleVisibility,
+  contentPointVisibility, onToggleContentPointVisibility, isLocked
 }) => {
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -138,76 +136,76 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
     e.stopPropagation();
     const newName = window.prompt("Enter new name for sub-topic:", topic.title);
     if (newName && newName.trim() !== '' && newName.trim() !== topic.title) {
-        onEdit(newName);
+      onEdit(newName);
     }
   };
 
   const handleDelete = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onDelete();
+    e.stopPropagation();
+    onDelete();
   }
 
   return (
-    <li className={`flex flex-col rounded-md transition-all duration-200 group ${isAdmin && !isVisible ? 'opacity-40' : ''} ${isLocked && !isAdmin ? 'bg-gray-50' : ''}`}>
-      <div className={`flex flex-col sm:flex-row sm:items-start justify-between py-2 px-2 rounded-md gap-2 sm:gap-0`}>
+    <li className={`flex flex-col rounded-xl transition-all duration-200 group ${isAdmin && !isVisible ? 'opacity-40' : ''} ${isLocked && !isAdmin ? 'bg-black/20' : 'hover:bg-white/5'}`}>
+      <div className={`flex flex-col sm:flex-row sm:items-start justify-between py-2 px-3 rounded-md gap-2 sm:gap-0`}>
         <div className="flex items-start gap-3 w-full">
-            <div className="relative flex-shrink-0">
-               <Icon iconName={isLocked && !isAdmin ? 'lock' : 'folder'} className={`h-5 w-5 mt-px ${isLocked && !isAdmin ? 'text-gray-400' : 'text-indigo-500'}`} />
-            </div>
-            <div className="flex flex-col w-full overflow-hidden">
-              <div className="flex items-center gap-1 flex-wrap">
-                <span className={`text-sm font-semibold break-words ${isLocked && !isAdmin ? 'text-gray-500' : 'text-gray-800'}`}>{topic.title}</span>
-                {isAdmin && (
-                    <>
-                        <button onClick={handleEdit} title="Edit sub-topic name" className="p-1 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Icon iconName="edit" className="h-3 w-3" />
-                        </button>
-                        <button onClick={handleDelete} title="Delete sub-topic" className="p-1 rounded-full text-gray-500 hover:bg-red-100 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
-                    </>
-                )}
-              </div>
-              {!isAdmin && questionCount > 0 && (
-                <p className="text-xs text-gray-500 mt-0.5">{questionCount} question{questionCount !== 1 ? 's' : ''} available</p>
-              )}
-              {topic.content.length > 0 && (
-                <ul className="pl-0 pr-0 sm:pr-4 mt-2 space-y-1 w-full">
-                    {topic.content.map((item, index) => {
-                       const isContentPointVisible = contentPointVisibility?.[item] ?? true;
-                       if (!isAdmin && !isContentPointVisible) return null;
-                       return (
-                           <ContentPointItem
-                              key={index}
-                              item={item}
-                              isAdmin={isAdmin}
-                              questionCount={contentPointQuestionCounts[item] || 0}
-                              onConfigureQuiz={() => onConfigureContentPointQuiz(item)}
-                              isVisible={isContentPointVisible}
-                              onToggleVisibility={() => onToggleContentPointVisibility(item)}
-                              onManage={() => onManage(topic.title, item)}
-                              onExport={() => onExport(topic.title, item)}
-                              onImport={(e) => onImport(e, topic.title, item)}
-                              isLocked={isLocked}
-                           />
-                       )
-                    })}
-                </ul>
+          <div className="relative flex-shrink-0">
+            <Icon iconName={isLocked && !isAdmin ? 'lock' : 'folder'} className={`h-5 w-5 mt-px ${isLocked && !isAdmin ? 'text-gray-600' : 'text-indigo-400'}`} />
+          </div>
+          <div className="flex flex-col w-full overflow-hidden">
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className={`text-sm font-semibold break-words ${isLocked && !isAdmin ? 'text-gray-600' : 'text-gray-200'}`}>{topic.title}</span>
+              {isAdmin && (
+                <>
+                  <button onClick={handleEdit} title="Edit sub-topic name" className="p-1 rounded-full text-gray-500 hover:bg-white/10 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Icon iconName="edit" className="h-3 w-3" />
+                  </button>
+                  <button onClick={handleDelete} title="Delete sub-topic" className="p-1 rounded-full text-gray-500 hover:bg-red-900/20 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                </>
               )}
             </div>
+            {!isAdmin && questionCount > 0 && (
+              <p className="text-xs text-gray-500 mt-0.5">{questionCount} question{questionCount !== 1 ? 's' : ''} available</p>
+            )}
+            {topic.content.length > 0 && (
+              <ul className="pl-0 pr-0 sm:pr-4 mt-2 space-y-1 w-full border-l-2 border-white/5 ml-1 pl-3">
+                {topic.content.map((item, index) => {
+                  const isContentPointVisible = contentPointVisibility?.[item] ?? true;
+                  if (!isAdmin && !isContentPointVisible) return null;
+                  return (
+                    <ContentPointItem
+                      key={index}
+                      item={item}
+                      isAdmin={isAdmin}
+                      questionCount={contentPointQuestionCounts[item] || 0}
+                      onConfigureQuiz={() => onConfigureContentPointQuiz(item)}
+                      isVisible={isContentPointVisible}
+                      onToggleVisibility={() => onToggleContentPointVisibility(item)}
+                      onManage={() => onManage(topic.title, item)}
+                      onExport={() => onExport(topic.title, item)}
+                      onImport={(e) => onImport(e, topic.title, item)}
+                      isLocked={isLocked}
+                    />
+                  )
+                })}
+              </ul>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-auto mt-1 sm:mt-0">
           {isAdmin ? (
             <>
               <button
-                  onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleVisibility();
-                  }}
-                  title={isVisible ? 'Hide sub-topic from users' : 'Show sub-topic to users'}
-                  className="p-1 text-gray-500 hover:text-gray-800"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleVisibility();
+                }}
+                title={isVisible ? 'Hide sub-topic from users' : 'Show sub-topic to users'}
+                className="p-1 text-gray-500 hover:text-white"
               >
-                  <Icon iconName={isVisible ? 'eye' : 'eye-slash'} className="h-4 w-4" />
+                <Icon iconName={isVisible ? 'eye' : 'eye-slash'} className="h-4 w-4" />
               </button>
               <input
                 type="file"
@@ -216,16 +214,15 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
                 accept=".json"
                 onChange={(e) => onImport(e, topic.title)}
               />
-              <button onClick={handleImportClick} title={`Import questions for ${topic.title}`} className="p-1 text-gray-500 hover:text-sky-600 transition-colors">
+              <button onClick={handleImportClick} title={`Import questions for ${topic.title}`} className="p-1 text-gray-500 hover:text-sky-400 transition-colors">
                 <Icon iconName="upload" className="h-4 w-4" />
               </button>
-              <button onClick={(e) => { e.stopPropagation(); onExport(topic.title); }} title={`Export questions for ${topic.title}`} className="p-1 text-gray-500 hover:text-pink-600 transition-colors">
+              <button onClick={(e) => { e.stopPropagation(); onExport(topic.title); }} title={`Export questions for ${topic.title}`} className="p-1 text-gray-500 hover:text-pink-400 transition-colors">
                 <Icon iconName="download" className="h-4 w-4" />
               </button>
-              <button 
+              <button
                 onClick={(e) => { e.stopPropagation(); onManage(topic.title); }}
-                className="px-3 py-1 text-xs font-semibold text-purple-700 bg-purple-100 rounded-full hover:bg-purple-200 transition-colors"
-                aria-label={`Manage questions for ${topic.title}`}
+                className="px-3 py-1 text-xs font-semibold text-purple-300 bg-purple-900/40 border border-purple-500/30 rounded-full hover:bg-purple-900/60 transition-colors"
               >
                 Manage
               </button>
@@ -233,16 +230,15 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
           ) : (
             topic.content.length === 0 && (
               isLocked ? (
-                 <span className="text-xs text-gray-400 font-medium px-2 py-1">Locked</span>
+                <span className="text-xs text-gray-600 font-medium px-2 py-1"><Icon iconName="lock" className="h-3 w-3 inline mr-1" /> Locked</span>
               ) : (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onConfigureSubTopicQuiz(); }}
-                    disabled={questionCount === 0}
-                    className="px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-full hover:bg-indigo-200 transition-colors disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed whitespace-nowrap"
-                    aria-label={`Start quiz for ${topic.title}`}
-                  >
-                    Start Quiz
-                  </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onConfigureSubTopicQuiz(); }}
+                  disabled={questionCount === 0}
+                  className="glass-button px-4 py-1.5 text-xs font-semibold rounded-full hover:bg-indigo-500/20 hover:border-indigo-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  Start Quiz
+                </button>
               )
             )
           )}
@@ -253,25 +249,25 @@ const SubTopicItem: React.FC<SubTopicItemProps> = ({
 };
 
 
-const ModuleListItem: React.FC<ModuleListItemProps> = ({ 
-    module, questionBank, onConfigure, isAdmin, onManage, onEdit, onDelete, onExport, onImport, isVisible, 
-    onToggleVisibility, subTopicVisibility, onToggleSubTopicVisibility, 
-    contentPointVisibility, onToggleContentPointVisibility,
-    onAddSubTopic, onEditSubTopic, onDeleteSubTopic, onGenerateAI, isGenerating, generatingStatus,
-    isLocked, unlockedSubTopics
+const ModuleListItem: React.FC<ModuleListItemProps> = ({
+  module, questionBank, onConfigure, isAdmin, onManage, onEdit, onDelete, onExport, onImport, isVisible,
+  onToggleVisibility, subTopicVisibility, onToggleSubTopicVisibility,
+  contentPointVisibility, onToggleContentPointVisibility,
+  onAddSubTopic, onEditSubTopic, onDeleteSubTopic, onGenerateAI, isGenerating, generatingStatus,
+  isLocked, unlockedSubTopics
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   const totalCustomQuestions = useMemo(() => {
     const moduleQuestions = questionBank[module.id];
     if (!moduleQuestions) {
       return 0;
     }
     return Object.values(moduleQuestions).reduce((sum: number, questionsArray) => {
-        if (Array.isArray(questionsArray)) {
-            return sum + questionsArray.length;
-        }
-        return sum;
+      if (Array.isArray(questionsArray)) {
+        return sum + questionsArray.length;
+      }
+      return sum;
     }, 0);
   }, [questionBank, module.id]);
 
@@ -281,35 +277,34 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
       onAddSubTopic(name);
     }
   };
-  
+
   const handleEditClick = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      const newTitle = window.prompt("Enter the new title for the module:", module.title);
-      if (newTitle) {
-          onEdit(newTitle);
-      }
+    e.stopPropagation();
+    const newTitle = window.prompt("Enter the new title for the module:", module.title);
+    if (newTitle) {
+      onEdit(newTitle);
+    }
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onDelete();
+    e.stopPropagation();
+    onDelete();
   };
 
   const getStatusBadge = () => {
     if (isAdmin) {
-        return <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-2 py-1 rounded-full whitespace-nowrap">Admin</span>;
+      return <span className="text-xs font-semibold text-indigo-300 bg-indigo-900/40 border border-indigo-500/30 px-2 py-1 rounded-full whitespace-nowrap">Admin</span>;
     }
     if (isLocked) {
-        return <span className="text-xs font-semibold text-gray-500 bg-gray-200 px-2 py-1 rounded-full flex items-center gap-1 whitespace-nowrap"><Icon iconName="lock" className="h-3 w-3"/> Locked</span>;
+      return <span className="text-xs font-semibold text-gray-500 bg-gray-900/50 border border-gray-700 px-2 py-1 rounded-full flex items-center gap-1 whitespace-nowrap"><Icon iconName="lock" className="h-3 w-3" /> Locked</span>;
     }
     return (
-        <span className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
-            totalCustomQuestions > 0 
-            ? 'text-sky-700 bg-sky-100' 
-            : 'text-gray-500 bg-gray-200'
+      <span className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap border ${totalCustomQuestions > 0
+          ? 'text-sky-300 bg-sky-900/40 border-sky-500/30'
+          : 'text-gray-500 bg-gray-900/40 border-gray-700'
         }`}>
-            {totalCustomQuestions} Qs
-        </span>
+        {totalCustomQuestions} Qs
+      </span>
     );
   };
 
@@ -317,15 +312,15 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
 
   // Handle click to expand only if not locked or if admin
   const handleClick = () => {
-      if (isAdmin || !isLocked) {
-          setIsExpanded(!isExpanded);
-      }
+    if (isAdmin || !isLocked) {
+      setIsExpanded(!isExpanded);
+    }
   }
 
   return (
-    <div className={`bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-300 ${isAdmin && !isVisible ? 'opacity-50' : ''} ${isLocked && !isAdmin ? 'bg-gray-50 opacity-75 cursor-not-allowed' : 'hover:bg-gray-50 cursor-pointer'}`}>
-      <div 
-        className="p-3 sm:p-4 flex items-center justify-between"
+    <div className={`glass-card rounded-xl transition-all duration-300 ${isAdmin && !isVisible ? 'opacity-50' : ''} ${isLocked && !isAdmin ? 'bg-gray-900/20 opacity-60 cursor-not-allowed border-gray-800' : 'hover:bg-white/5 cursor-pointer'}`}>
+      <div
+        className="p-4 sm:p-5 flex items-center justify-between"
         onClick={handleClick}
         aria-expanded={isExpanded}
         aria-controls={`module-content-${module.id}`}
@@ -333,80 +328,80 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
         tabIndex={isLocked && !isAdmin ? -1 : 0}
         onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && (!isLocked || isAdmin)) setIsExpanded(!isExpanded); }}
       >
-        <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
+        <div className="flex items-center gap-4 overflow-hidden">
           {isAdmin && (
             <div className="flex items-center gap-1 flex-shrink-0">
               <button
-                  onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleVisibility();
-                  }}
-                  title={isVisible ? 'Hide module from users' : 'Show module to users'}
-                  className="p-2 rounded-full hover:bg-gray-200 text-gray-500 hover:text-gray-800"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleVisibility();
+                }}
+                title={isVisible ? 'Hide module from users' : 'Show module to users'}
+                className="p-2 rounded-full hover:bg-white/10 text-gray-500 hover:text-white"
               >
-                  <Icon iconName={isVisible ? 'eye' : 'eye-slash'} className="h-5 w-5" />
+                <Icon iconName={isVisible ? 'eye' : 'eye-slash'} className="h-5 w-5" />
               </button>
-              
+
               {/* Bulk AI Generate Button */}
               {onGenerateAI && (
-                  <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (!isGenerating) onGenerateAI();
-                    }}
-                    title="Bulk Generate Questions using AI for all sub-topics"
-                    className={`p-2 rounded-full hover:bg-indigo-50 ${isGenerating ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'}`}
-                  >
-                     {isGenerating ? (
-                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                     ) : (
-                         <Icon iconName="sparkles" className="h-5 w-5" />
-                     )}
-                  </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isGenerating) onGenerateAI();
+                  }}
+                  title="Bulk Generate Questions using AI for all sub-topics"
+                  className={`p-2 rounded-full hover:bg-indigo-500/20 ${isGenerating ? 'text-indigo-400' : 'text-gray-500 hover:text-indigo-400'}`}
+                >
+                  {isGenerating ? (
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <Icon iconName="sparkles" className="h-5 w-5" />
+                  )}
+                </button>
               )}
             </div>
           )}
-          <div className={`p-2 sm:p-3 rounded-lg flex-shrink-0 ${isLocked && !isAdmin ? 'bg-gray-200 text-gray-400' : module.color}`}>
+          <div className={`p-3 rounded-xl flex-shrink-0 ${isLocked && !isAdmin ? 'bg-gray-800 text-gray-600' : 'bg-gradient-to-br from-indigo-500/20 to-purple-500/20 text-indigo-400 border border-indigo-500/30'}`}>
             <Icon iconName={isLocked && !isAdmin ? 'lock' : module.icon} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h3 className={`font-bold truncate ${isLocked && !isAdmin ? 'text-gray-500' : 'text-gray-900'}`}>{module.title}</h3>
+              <h3 className={`font-bold text-lg truncate ${isLocked && !isAdmin ? 'text-gray-500' : 'text-gray-100'}`}>{module.title}</h3>
               {isAdmin && (
                 <>
-                    <button
+                  <button
                     onClick={handleEditClick}
                     title="Edit module title"
-                    className="p-1 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 flex-shrink-0"
-                    >
-                        <Icon iconName="edit" className="h-4 w-4" />
-                    </button>
-                    <button
+                    className="p-1 rounded-full text-gray-500 hover:bg-white/10 hover:text-white flex-shrink-0"
+                  >
+                    <Icon iconName="edit" className="h-4 w-4" />
+                  </button>
+                  <button
                     onClick={handleDeleteClick}
                     title="Delete module"
-                    className="p-1 rounded-full text-gray-500 hover:bg-red-100 hover:text-red-600 flex-shrink-0"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
+                    className="p-1 rounded-full text-gray-500 hover:bg-red-900/20 hover:text-red-400 flex-shrink-0"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
                 </>
               )}
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm text-gray-600">
-                 <span className="whitespace-nowrap">{module.subTopics.length} sub-topics</span>
-                 {isGenerating && generatingStatus && (
-                     <span className="text-xs text-indigo-600 font-medium animate-pulse hidden sm:inline-block truncate">
-                         — {generatingStatus}
-                     </span>
-                 )}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm text-gray-500">
+              <span className="whitespace-nowrap">{module.subTopics.length} sub-topics</span>
+              {isGenerating && generatingStatus && (
+                <span className="text-xs text-indigo-400 font-medium animate-pulse hidden sm:inline-block truncate">
+                  — {generatingStatus}
+                </span>
+              )}
             </div>
             {isGenerating && generatingStatus && (
-                 <p className="text-xs text-indigo-600 font-medium animate-pulse mt-1 sm:hidden">
-                     {generatingStatus}
-                 </p>
-             )}
+              <p className="text-xs text-indigo-400 font-medium animate-pulse mt-1 sm:hidden">
+                {generatingStatus}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 ml-2">
@@ -416,59 +411,59 @@ const ModuleListItem: React.FC<ModuleListItemProps> = ({
           )}
         </div>
       </div>
-      
+
       {isExpanded && (
-        <div id={`module-content-${module.id}`} className="px-3 sm:px-4 pb-4 pt-0 border-t border-gray-200">
-          <h4 className="text-xs sm:text-sm font-semibold text-gray-700 my-3 px-2">Sub-Topics Covered:</h4>
-           {visibleSubTopics.length > 0 ? (
+        <div id={`module-content-${module.id}`} className="px-3 sm:px-6 pb-6 pt-2 border-t border-white/5">
+          <h4 className="text-xs sm:text-sm font-semibold text-gray-400 my-3 px-1 uppercase tracking-wider">Sub-Topics Covered:</h4>
+          {visibleSubTopics.length > 0 ? (
             <ul className="space-y-1">
-                {visibleSubTopics.map((topic, index) => {
-                    const moduleQuestions = questionBank[module.id] || {};
+              {visibleSubTopics.map((topic, index) => {
+                const moduleQuestions = questionBank[module.id] || {};
 
-                    const contentPointQuestionCounts: { [key: string]: number } = {};
-                    topic.content.forEach(cp => {
-                        const contentPointIdentifier = `${topic.title}::${cp}`;
-                        contentPointQuestionCounts[cp] = moduleQuestions[contentPointIdentifier]?.length || 0;
-                    });
+                const contentPointQuestionCounts: { [key: string]: number } = {};
+                topic.content.forEach(cp => {
+                  const contentPointIdentifier = `${topic.title}::${cp}`;
+                  contentPointQuestionCounts[cp] = moduleQuestions[contentPointIdentifier]?.length || 0;
+                });
 
-                    const subTopicOnlyQuestionCount = moduleQuestions[topic.title]?.length || 0;
-                    const totalSubTopicQuestionCount = subTopicOnlyQuestionCount + Object.values(contentPointQuestionCounts).reduce((a, b) => a + b, 0);
-                    
-                    const isSubTopicLocked = !isAdmin && !unlockedSubTopics?.includes(`${module.id}-${topic.title}`);
+                const subTopicOnlyQuestionCount = moduleQuestions[topic.title]?.length || 0;
+                const totalSubTopicQuestionCount = subTopicOnlyQuestionCount + Object.values(contentPointQuestionCounts).reduce((a, b) => a + b, 0);
 
-                    return (
-                        <SubTopicItem
-                          key={index}
-                          topic={topic}
-                          isAdmin={isAdmin}
-                          questionCount={totalSubTopicQuestionCount}
-                          contentPointQuestionCounts={contentPointQuestionCounts}
-                          onConfigureSubTopicQuiz={() => onConfigure(topic.title)}
-                          onConfigureContentPointQuiz={(contentPoint) => onConfigure(topic.title, contentPoint)}
-                          onManage={onManage}
-                          onEdit={(newTopicTitle) => onEditSubTopic(topic.title, newTopicTitle)}
-                          onDelete={() => onDeleteSubTopic(topic.title)}
-                          onExport={onExport}
-                          onImport={onImport}
-                          isVisible={subTopicVisibility[topic.title] ?? true}
-                          onToggleVisibility={() => onToggleSubTopicVisibility(topic.title)}
-                          contentPointVisibility={contentPointVisibility[topic.title] || {}}
-                          onToggleContentPointVisibility={(contentPoint) => onToggleContentPointVisibility(topic.title, contentPoint)}
-                          isLocked={isSubTopicLocked}
-                        />
-                    );
-                })}
+                const isSubTopicLocked = !isAdmin && !unlockedSubTopics?.includes(`${module.id}-${topic.title}`);
+
+                return (
+                  <SubTopicItem
+                    key={index}
+                    topic={topic}
+                    isAdmin={isAdmin}
+                    questionCount={totalSubTopicQuestionCount}
+                    contentPointQuestionCounts={contentPointQuestionCounts}
+                    onConfigureSubTopicQuiz={() => onConfigure(topic.title)}
+                    onConfigureContentPointQuiz={(contentPoint) => onConfigure(topic.title, contentPoint)}
+                    onManage={onManage}
+                    onEdit={(newTopicTitle) => onEditSubTopic(topic.title, newTopicTitle)}
+                    onDelete={() => onDeleteSubTopic(topic.title)}
+                    onExport={onExport}
+                    onImport={onImport}
+                    isVisible={subTopicVisibility[topic.title] ?? true}
+                    onToggleVisibility={() => onToggleSubTopicVisibility(topic.title)}
+                    contentPointVisibility={contentPointVisibility[topic.title] || {}}
+                    onToggleContentPointVisibility={(contentPoint) => onToggleContentPointVisibility(topic.title, contentPoint)}
+                    isLocked={isSubTopicLocked}
+                  />
+                );
+              })}
             </ul>
-           ) : (
-            <p className="text-sm text-gray-500 text-center py-4">No sub-topics defined or all are currently hidden.</p>
-           )}
-           {isAdmin && (
-                <div className="mt-4 px-2">
-                    <button onClick={handleAddSubTopicClick} className="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-colors">
-                        + Add New Sub-Topic
-                    </button>
-                </div>
-            )}
+          ) : (
+            <p className="text-sm text-gray-500 text-center py-4 italic">No sub-topics defined or all are currently hidden.</p>
+          )}
+          {isAdmin && (
+            <div className="mt-4 px-1">
+              <button onClick={handleAddSubTopicClick} className="w-full py-2.5 border-dashed border border-gray-700 hover:border-indigo-500/50 text-gray-500 hover:text-indigo-400 font-medium rounded-lg hover:bg-indigo-500/10 transition-all text-sm">
+                + Add New Sub-Topic
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,108 +1,59 @@
-# 🛡️ Cyber Security Training Platform
+# Cybersecurity Training Platform
 
-An advanced, AI-powered interactive web application designed to help professionals prepare for cybersecurity certifications like **CEH v13**, **CISSP**, and more. 
+An interactive web application designed for cybersecurity training. This platform provides modules for certifications like **CEH v13** and **CISSP**, allowing for custom quiz creation and progress tracking.
 
-This platform utilizes **Google's Gemini AI** to dynamically generate questions, explain complex concepts, and categorize content, providing an infinite resource for study materials.
+## Key Features
 
----
-
-## 🚀 Key Features
-c
-### 👨‍🎓 For Learners
-*   **Multi-Certification Support**: Pre-loaded structure for CEH v13 and CISSP, with the ability to add custom exams.
-*   **Granular Learning**: Drill down from Exam -> Module -> Sub-Topic -> Content Point.
-*   **Two Quiz Modes**:
-    *   **Study Mode**: Reveal answers immediately after selection with detailed explanations.
-    *   **Exam Mode**: Simulate a real test environment (no immediate feedback, results at the end).
-*   **Visual Progress Tracking**:
-    *   Detailed dashboards showing performance by Domain.
-    *   Track speed, accuracy, and total study time.
-    *   **PDF Export**: Download professional quiz result reports.
-*   **Review System**: specific section to review incorrect answers with AI-generated explanations.
-*   **Privacy First**: All progress data is stored locally in your browser.
-
-### 👮‍♂️ For Admins
-*   **Content Management**: Add, edit, or hide Exams, Modules, and Sub-topics.
-*   **Question Bank Management**:
-    *   Create/Edit/Delete questions manually.
-    *   **AI Generation**: Generate distinct questions for specific topics using Gemini AI.
-*   **Import/Export**: 
-    *   Backup the entire question bank to JSON.
-    *   Share specific topic questions with other users.
-*   **Visibility Control**: Toggle visibility of specific modules or topics for learners.
+- **Custom Quizzes**: Admins can create and manage a comprehensive question bank for any topic.
+- **Multiple Certifications**: Comes pre-loaded with training modules for CEH v13 and CISSP.
+- **Topic-based Quizzing**: Users can take quizzes on specific sub-topics or even individual content points.
+- **Manual Explanations**: Admins can provide detailed explanations for questions to aid in learning.
+- **User Progress Tracking**: The platform tracks completed modules, showing visual progress for non-admin users.
+- **Comprehensive Admin Panel**: A password-protected admin mode unlocks powerful content management capabilities.
 
 ---
 
-## 🛠️ Tech Stack
+## Admin Features
 
-*   **Frontend Framework**: React 19
-*   **Language**: TypeScript
-*   **Styling**: Tailwind CSS
-*   **AI Integration**: Google GenAI SDK (`@google/genai`) using `gemini-2.5-flash`
-*   **PDF Generation**: `html2canvas` + `jspdf`
-*   **Icons**: Custom SVG Icon set
-*   **Persistence**: Browser LocalStorage
+The admin panel allows for complete control over the training content.
 
----
+**Login**: Use `admin` / `password` to log in.
 
-## ⚙️ Configuration & Setup
-
-### Prerequisites
-To utilize the AI features (Question Generation and Explanations), you must have a valid **Google Gemini API Key**.
-
-### Environment Variables
-The application expects the API key to be available in the process environment:
-`process.env.API_KEY`
-
-### Running the Project
-This project uses a standard React setup (Vite recommended).
-
-1.  **Install Dependencies**
-    ```bash
-    npm install
-    ```
-
-2.  **Start Development Server**
-    ```bash
-    npm run dev
-    ```
+- **Content Curation**:
+  - Create, edit, and delete custom questions for any topic.
+  - Provide manual explanations for questions.
+- **Content Management**:
+  - Add or edit entire exam folders (e.g., add a new certification).
+  - Add, edit, or hide modules, sub-topics, and individual content points.
+- **Import & Export**:
+  - Export the entire question bank to a single JSON file.
+  - Import a complete question bank from a JSON file.
+  - Export/Import questions for specific topics, allowing for modular content sharing.
 
 ---
 
-## 🔐 Admin Access
+## Tech Stack
 
-To access the Admin Dashboard for managing content and generating questions:
-
-1.  Click the **"Admin Login"** button on the sidebar.
-2.  Use the following default credentials:
-    *   **Username**: `admin`
-    *   **Password**: `password`
-
-*(Note: In a production environment, replace the hardcoded credentials in `LoginView.tsx` with a secure authentication service.)*
+- **Frontend**: React, TypeScript, Tailwind CSS
+- **State Management**: React Hooks (`useState`, `useEffect`, `useCallback`)
+- **Data Persistence**: Browser `localStorage` for saving progress, visibility settings, and the custom question bank.
 
 ---
 
-## 🧠 AI Features
+## Getting Started
 
-The platform leverages **Google Gemini 2.5 Flash** for:
-1.  **Question Generation**: Creating 4-option multiple-choice questions based on specific content points.
-2.  **Tutor Explanations**: Generating "Why is this correct?" or "Why is this wrong?" explanations dynamically in Study Mode.
-3.  **Tagging**: Automatically generating relevant hashtags for questions.
+This project is built to run directly in the browser without a complex build setup, using ES modules and an import map.
 
----
-
-## 📂 Project Structure
-
-*   **`App.tsx`**: Main application controller and state manager.
-*   **`components/`**: UI components (Dashboard, QuizView, Results, etc.).
-*   **`services/geminiService.ts`**: Interface with Google GenAI API.
-*   **`constants.ts`**: Static curriculum data (CEH/CISSP modules).
-*   **`types.ts`**: TypeScript interfaces for Exams, Questions, and Results.
+1.  **Running Locally**: Serve the `index.html` file using a simple local web server. The application will initialize and run from there.
 
 ---
 
-## 📝 License
+## Author
 
-This project is open-source and available for educational purposes.
+**XCODE96**
 
-**Developed by XCODE96**
+- **GitHub**: [github.com/xcode96](https://github.com/xcode96/)
+- **LinkedIn**: [linkedin.com/in/manibharathi96](https://www.linkedin.com/in/manibharathi96)
+
+---
+Developed by XCODE96

@@ -16,6 +16,7 @@ export interface Exam {
   id: number;
   title: string;
   description: string;
+  icon?: IconName;
   modules: Module[];
 }
 
@@ -37,28 +38,28 @@ export type QuestionBank = {
 };
 
 export interface UserAnswer {
-    questionId: string;
-    questionText: string;
-    selectedAnswer: string;
-    correctAnswer: string;
-    isCorrect: boolean;
-    explanation?: string;
+  questionId: string;
+  questionText: string;
+  selectedAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  explanation?: string;
 }
 
 export interface QuizResult {
-    score: number;
-    correctCount: number;
-    totalQuestions: number;
-    avgTimePerQuestion: number; // in seconds
-    totalTime: number; // in seconds
-    userAnswers: UserAnswer[];
+  score: number;
+  correctCount: number;
+  totalQuestions: number;
+  avgTimePerQuestion: number; // in seconds
+  totalTime: number; // in seconds
+  userAnswers: UserAnswer[];
 }
 
 export interface QuizAttempt extends QuizResult {
-    moduleId: number;
-    moduleTitle: string;
-    topicTitle: string;
-    timestamp: string;
+  moduleId: number;
+  moduleTitle: string;
+  topicTitle: string;
+  timestamp: string;
 }
 
 export interface StudyResource {
@@ -70,13 +71,13 @@ export interface StudyResource {
   category: string;
 }
 
-export type IconName = 
-  'key' | 'shield' | 'mail' | 'smartphone' | 
-  'lock' | 'alert' | 'users' | 'shield-check' | 
+export type IconName =
+  'key' | 'shield' | 'mail' | 'smartphone' |
+  'lock' | 'alert' | 'users' | 'shield-check' |
   'laptop' | 'database' | 'footprint' | 'scan' |
   'bug' | 'wifi' | 'ban' | 'server' | 'code-bracket' |
   'iot' | 'cloud' | 'chevron-down' | 'sparkles' |
-  'upload' | 'download' | 'eye' | 'eye-slash' | 'edit' | 
-  'book-open' | 'folder' | 'folder-open' | 'github' | 'linkedin';
+  'upload' | 'download' | 'eye' | 'eye-slash' | 'edit' |
+  'book-open' | 'folder' | 'folder-open' | 'github' | 'linkedin' | 'home' | 'lock-open' | 'ceh' | 'cissp' | 'cysa' | 'collection';
 
 export type ModuleStatus = 'completed' | 'in-progress' | 'not-started';
